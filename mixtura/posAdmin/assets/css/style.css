@@ -1,0 +1,84 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;600&display=swap');
+body {
+	font-family: 'Barlow', sans-serif; !important;
+	background: #23272A;
+    color: #FFF !important;
+}
+.nvm-header {
+	background-color: #12161A;
+	height: 100px;
+	box-shadow: 0px 3px 2px #FFC90C;
+    color: #FFF;
+}
+.navbar-inverse {
+	background-color: #12161A;
+    color: #FFF;
+}
+#bs-example-navbar-collapse-1 {	
+    margin-top: 20px;
+    color: #000;
+}
+.navbar-inverse .navbar-nav>li>a {
+    color: #FFF;
+    font-weight: 600;
+}
+.navbar-inverse .navbar-nav>li>a:hover {
+    color: #FFC90C; 
+}
+#importFrm {
+	padding: 30px;
+}
+.btn-default {
+	background: #FFC90C;
+	border-radius: 4px;
+	color: #0C3A39;
+	font-weight: 600;
+}
+.in li, .collapsing li {
+	background-color: #FFC90C;
+	border-bottom: 1px solid #0C3A39;	
+}
+.in  ul, .collapsing ul{	
+	box-shadow: 2px 3px 2px #0C3A39;
+}
+
+.btn-default:hover,
+.btn-default:focus,
+.btn-default.focus,
+.btn-default:active,
+.btn-default.active {
+	background: #0C3A39;
+	color: #FFC90C;	
+}
+.table-label {
+	background-color: #12161A;	
+}
+bordered>thead>tr>td, .table-bordered>thead>tr>th {
+    border: 1px solid #12161A;
+}
+.gc-container .table-container {
+    border-left: 1px solid #12161A;
+    border-right: 1px solid #12161A;
+}
+.table-bordered>tbody>tr>td, .table-bordered>tbody>tr>th, .table-bordered>tfoot>tr>td, .table-bordered>tfoot>tr>th, .table-bordered>thead>tr>td, .table-bordered>thead>tr>th {
+    border: 1px solid #12161A !important;
+}
+.gc-container .header-tools {
+    padding: 5px 5px 10px 5px;
+    border-left: 1px solid #12161A;
+    border-right: 1px solid #12161A;
+}
+td:hover, th:hover {
+	background-color: #0C3A39;		
+}
+.table-hover>tbody>tr:hover {
+    background-color: #12161A;
+}
+.table>tbody>tr>td.active, .table>thead>tr>th.active {
+	background-color: #0C3A39;	
+
+}
+.gc-container .column-with-ordering:hover {
+    background: #12161A !important;
+    color: #FFF !important;
+}
