@@ -3,7 +3,7 @@ ini_set('display_errors', 0);
 error_reporting(0);
 
 header("Access-Control-Allow-Origin: http://localhost:8101");
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, System");
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 header("Access-Control-Allow-Credentials: true");
 header("Content-Type: application/json");
@@ -41,14 +41,8 @@ try {
         exit;
     }
 
-    $token = bin2hex(random_bytes(32));
-
-    $update = $pdo->prepare("UPDATE user SET api_token = ?, last_loggin = NOW() WHERE id = ?");
-    $update->execute([$token, $user['id']]);
-
     echo json_encode([
         "error" => 0,
-        "token" => $token,
         "id" => $user['id'],
         "name" => $user['name'],
     ]);
