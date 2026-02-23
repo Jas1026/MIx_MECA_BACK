@@ -2,10 +2,9 @@
 ini_set('display_errors', 0);
 error_reporting(0);
 
-header("Access-Control-Allow-Origin: http://localhost:8100");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, System");
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
-header("Access-Control-Allow-Credentials: true");
 header("Content-Type: application/json");
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -13,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-include('dbconnect.php');
+require_once 'dbconnect.php';
 
 $id_flat = $_POST['id_flat'] ?? $_GET['id_flat'] ?? '';
 
@@ -24,9 +23,21 @@ if (empty($id_flat)) {
 
 try {
 
-    $stmt = $pdo->prepare("SELECT id_table, nombre, capacidad, estado 
-                           FROM cafe_tables 
-                           WHERE id_flats = ?");
+    $stmt = $pdo->prepare("
+        SELECT 
+            t.id_table,
+            t.nombre,
+            t.capacidad,
+            t.estado,
+            o.order_id,
+            o.status
+        FROM cafe_tables t
+        LEFT JOIN orders o 
+            ON t.id_table = o.table_id
+            AND o.status IN ('open','ready')
+        WHERE t.id_flats = ?
+    ");
+
     $stmt->execute([$id_flat]);
 
     $tables = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -40,7 +51,6 @@ try {
 
     echo json_encode([
         "error" => 1,
-        "message" => "Error cargando mesas"
+        "message" => $e->getMessage()
     ]);
-
 }

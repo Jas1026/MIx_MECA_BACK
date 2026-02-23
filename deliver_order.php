@@ -24,7 +24,7 @@ try {
     $stmt = $pdo->prepare("
         UPDATE orders 
         SET status = 'ready'
-        WHERE id_order = ?
+        WHERE order_id = ?
     ");
     $stmt->execute([$order_id]);
 

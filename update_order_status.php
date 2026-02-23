@@ -13,7 +13,7 @@ if ($status === 'closed') {
         UPDATE cafe_tables 
         SET estado = 'Libre'
         WHERE id_table = (
-            SELECT id_table FROM orders WHERE id_order = ?
+            SELECT id_table FROM orders WHERE order_id = ?
         )
     ")->execute([$id_order]);
 }
