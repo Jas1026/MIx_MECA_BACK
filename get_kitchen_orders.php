@@ -23,7 +23,7 @@ try {
         INNER JOIN products p ON p.id_product = od.product_id
         INNER JOIN product_kitchen pk ON pk.product_id = p.id_product
 WHERE pk.kitchen_id = ?
-AND od.status IN ('pending','ready')
+AND od.status IN ('pending')
 AND o.status NOT IN ('paid','closed')
 ORDER BY o.order_date ASC
     ");

@@ -14,7 +14,21 @@ header("Content-Type: application/json");
 
 require_once 'dbconnect.php';
 
-$order_id = $_GET['order_id'] ?? '';
+// Intentar GET primero
+$order_id = $_GET['order_id'] ?? null;
+
+// Si no viene por GET, intentar POST (FormData)
+if (!$order_id) {
+    $order_id = $_POST['order_id'] ?? null;
+}
+
+if (!$order_id) {
+    echo json_encode([
+        "error"=>1,
+        "message"=>"Falta order_id"
+    ]);
+    exit;
+}
 
 if (!$order_id) {
     echo json_encode(["error"=>1,"message"=>"Falta order_id"]);
