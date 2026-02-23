@@ -5,7 +5,7 @@ header("Content-Type: application/json");
 
 include('dbconnect.php');
 
-$kitchen_id = $_GET['kitchen_id'] ?? 0;
+$kitchen_id = $_POST['kitchen_id'] ?? 0;
 
 try {
 
@@ -22,10 +22,10 @@ try {
         INNER JOIN orders o ON o.order_id = od.order_id
         INNER JOIN products p ON p.id_product = od.product_id
         INNER JOIN product_kitchen pk ON pk.product_id = p.id_product
-        WHERE pk.kitchen_id = ?
-        AND od.status = 'pending'
-        AND o.status != 'paid'
-        ORDER BY o.order_date ASC
+WHERE pk.kitchen_id = ?
+AND od.status IN ('pending','ready')
+AND o.status NOT IN ('paid','closed')
+ORDER BY o.order_date ASC
     ");
 
     $stmt->execute([$kitchen_id]);

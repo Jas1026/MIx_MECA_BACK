@@ -15,14 +15,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once 'dbconnect.php';
 
 try {
-    $input = json_decode(file_get_contents("php://input"), true);
+// Intentar leer JSON primero
+$input = json_decode(file_get_contents("php://input"), true);
 
-    if (!isset($input['detail_id']) || !isset($input['status'])) {
-        throw new Exception("Faltan parámetros");
-    }
+if ($input) {
+    $detail_id = $input['detail_id'] ?? null;
+    $status = $input['status'] ?? null;
+} else {
+    // Si no es JSON, usar POST (FormData)
+    $detail_id = $_POST['detail_id'] ?? null;
+    $status = $_POST['status'] ?? null;
+}
 
-    $detail_id = $input['detail_id'];
-    $status = $input['status'];
+if (!$detail_id || !$status) {
+    throw new Exception("Faltan parámetros");
+}
 
     // Actualizar el detalle
     $stmt = $pdo->prepare("UPDATE order_details SET status = ? WHERE detail_id = ?");

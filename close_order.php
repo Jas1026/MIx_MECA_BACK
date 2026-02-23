@@ -10,8 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once 'dbconnect.php';
 
-$input = json_decode(file_get_contents("php://input"), true);
-$order_id = $input['order_id'] ?? null;
+$order_id = $_POST['order_id'] ?? null;
 
 if (!$order_id) {
     echo json_encode(["error"=>1,"message"=>"Falta order_id"]);
