@@ -1,19 +1,30 @@
 <?php
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
+ini_set('display_errors', 0);
+error_reporting(0);
 
 header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 header("Content-Type: application/json");
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
 
 require_once 'dbconnect.php';
 
+$system = $_POST['system'] ?? '';
+
 try {
 
-    $stmt = $pdo->query("
-        SELECT id_ingredients, nombre, stock_act, unidad_med
-        FROM ingredients
+    $stmt = $pdo->prepare("
+        SELECT *
+        FROM assets
         ORDER BY nombre ASC
     ");
+
+    $stmt->execute();
 
     $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
