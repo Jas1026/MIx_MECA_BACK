@@ -12,7 +12,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
-
 include('dbconnect.php');
 
 $code = $_POST['code'] ?? '';
@@ -24,7 +23,6 @@ if (empty($code) || empty($password)) {
 }
 
 try {
-
     $stmt = $pdo->prepare("SELECT * FROM user WHERE code = ? AND state = 1");
     $stmt->execute([$code]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -34,17 +32,17 @@ try {
         exit;
     }
 
-
     if ($password !== $user['password']) {
-
         echo json_encode(["error" => 1, "message" => "Contraseña incorrecta"]);
         exit;
     }
 
+    // AÑADIMOS EL ROL AL JSON DE RESPUESTA
     echo json_encode([
         "error" => 0,
         "id" => $user['id'],
         "name" => $user['name'],
+        "role" => $user['role'] 
     ]);
 
 } catch (PDOException $e) {

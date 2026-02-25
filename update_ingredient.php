@@ -4,32 +4,37 @@ header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Credentials: true");
 
+// 1. LEER EL JSON ANTES QUE CUALQUIER OTRA COSA
+$input = file_get_contents("php://input");
+$data = json_decode($input, true);
+
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
 
+// 2. PARCHE: Inyectar el sistema en $_POST antes del include
+// Esto es vital para que dbconnect.php elija la BD correcta
+if (isset($data['system'])) {
+    $_POST['system'] = $data['system'];
+}
+
 header("Content-Type: application/json");
 
-// Importante: Aquí se crea la variable $pdo
-include "dbconnect.php";
-
-$data = json_decode(file_get_contents("php://input"), true);
+// 3. AHORA SÍ incluimos la conexión
+include "dbconnect.php"; 
 
 if (!$data) {
     echo json_encode(["success" => false, "error" => "No se recibieron datos"]);
     exit;
 }
 
-// Verificamos que al menos el ID exista
 if (!isset($data["id_ingredients"])) {
     echo json_encode(["success" => false, "error" => "ID del ingrediente faltante"]);
     exit;
 }
 
 try {
-    // Usamos $pdo de dbconnect.php
-    // Incluimos todos los campos para que la actualización sea completa
     $sql = "UPDATE ingredients 
             SET nombre = :nombre,
                 stock_act = :stock,
@@ -53,14 +58,7 @@ try {
         ":capacidad_total" => $data["capacidad_total"] ?? null
     ]);
 
-    if ($result) {
-        // rowCount() sirve para saber si realmente se cambió algo o si el ID no existía
-        if ($stmt->rowCount() > 0) {
-            echo json_encode(["success" => true, "message" => "Actualizado correctamente"]);
-        } else {
-            echo json_encode(["success" => true, "message" => "No hubo cambios o el ID no existe"]);
-        }
-    }
+    echo json_encode(["success" => true, "message" => "Actualizado correctamente en " . $_POST['system']]);
 
 } catch (PDOException $e) {
     http_response_code(500);

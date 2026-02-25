@@ -1,7 +1,4 @@
 <?php
-ini_set('display_errors', 0);
-error_reporting(0);
-
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
@@ -14,31 +11,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once 'dbconnect.php';
 
-$nombre = $_POST['nombre'] ?? '';
-$categoria = $_POST['categoria'] ?? '';
-$stock = $_POST['stock'] ?? 0;
-$system = $_POST['system'] ?? '';
+// LEER JSON DESDE ANGULAR
+$json = file_get_contents("php://input");
+$data = json_decode($json, true);
+
+$nombre = $data['nombre'] ?? '';
+$categoria = $data['categoria'] ?? '';
+$stock = $data['stock'] ?? 0;
+$system = $data['system'] ?? 'mecapos'; // Default por si acaso
+
+// CAMBIAR A LA DB CORRECTA ANTES DE INSERTAR
+$pdo->exec("USE `$system` ");
 
 if ($nombre == '' || $categoria == '') {
-    echo json_encode(["error" => 1, "message" => "Campos incompletos"]);
+    echo json_encode(["error" => 1, "message" => "Faltan datos", "recibido" => $data]);
     exit();
 }
 
 try {
-
-    $stmt = $pdo->prepare("
-        INSERT INTO assets (nombre, categoria, stock)
-        VALUES (?, ?, ?)
-    ");
-
+    $stmt = $pdo->prepare("INSERT INTO assets (nombre, categoria, stock) VALUES (?, ?, ?)");
     $stmt->execute([$nombre, $categoria, $stock]);
-
     echo json_encode(["error" => 0, "message" => "Asset creado"]);
-
 } catch (PDOException $e) {
-
-    echo json_encode([
-        "error" => 1,
-        "message" => $e->getMessage()
-    ]);
-}|
+    echo json_encode(["error" => 1, "message" => $e->getMessage()]);
+}
