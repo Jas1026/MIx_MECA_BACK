@@ -6,13 +6,14 @@ header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json");
 
 require_once 'dbconnect.php';
-
 try {
-
+    // Cambiamos la consulta para que busque empleados/meseros
+    // Ajusta 'users' y 'username' según los nombres reales de tu tabla
     $stmt = $pdo->query("
-        SELECT id_ingredients, nombre, stock_act, unidad_med
-        FROM ingredients
-        ORDER BY nombre ASC
+        SELECT id,code, name AS nombre 
+        FROM user 
+
+        ORDER BY name ASC
     ");
 
     $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -21,8 +22,8 @@ try {
         "error" => 0,
         "data" => $data
     ]);
-
-} catch (PDOException $e) {
+} 
+catch (PDOException $e) {
 
     echo json_encode([
         "error" => 1,

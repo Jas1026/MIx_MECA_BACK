@@ -23,20 +23,22 @@ if (empty($id_flat)) {
 
 try {
 
-    $stmt = $pdo->prepare("
-        SELECT 
-            t.id_table,
-            t.nombre,
-            t.capacidad,
-            t.estado,
-            o.order_id,
-            o.status
-        FROM cafe_tables t
-        LEFT JOIN orders o 
-            ON t.id_table = o.table_id
-            AND o.status IN ('open','ready')
-        WHERE t.id_flats = ?
-    ");
+  // Cambia tu consulta en get_tables.php por esta:
+$stmt = $pdo->prepare("
+    SELECT 
+        t.id_table,
+        t.nombre,
+        t.capacidad,
+        t.estado,
+        MAX(o.order_id) as order_id, -- Tomamos solo el ID más nuevo
+        o.status
+    FROM cafe_tables t
+    LEFT JOIN orders o 
+        ON t.id_table = o.table_id
+        AND o.status IN ('open','ready')
+    WHERE t.id_flats = ?
+    GROUP BY t.id_table -- Esto evita la duplicidad de mesas
+");
 
     $stmt->execute([$id_flat]);
 
