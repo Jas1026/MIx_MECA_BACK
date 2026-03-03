@@ -17,15 +17,16 @@ try {
             od.quantity,
             od.status,
             o.table_id,
-            p.nombre_producto AS name
+            o.order_date,
+            p.nombre_producto AS name,
+            p.time_prep
         FROM order_details od
         INNER JOIN orders o ON o.order_id = od.order_id
         INNER JOIN products p ON p.id_product = od.product_id
-        INNER JOIN product_kitchen pk ON pk.product_id = p.id_product
-WHERE pk.kitchen_id = ?
-AND od.status IN ('pending')
-AND o.status NOT IN ('paid','closed')
-ORDER BY o.order_date ASC
+        WHERE od.kitchen_id = ?
+        AND od.status = 'pending'
+        AND o.status NOT IN ('paid','closed')
+        ORDER BY o.order_date ASC
     ");
 
     $stmt->execute([$kitchen_id]);

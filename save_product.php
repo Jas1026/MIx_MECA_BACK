@@ -1,27 +1,27 @@
 <?php
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: Content-Type");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Content-Type: application/json");
 
-// 1. Incluimos tu conexión actual para no perder la configuración de host/user/pass
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') { exit(0); }
+
 include "dbconnect.php"; 
 
 $data = json_decode(file_get_contents("php://input"), true);
 
-if (!$data) {
-    echo json_encode(["success" => false, "error" => "No data received"]);
+if (!$data || !isset($data['system'])) {
+    echo json_encode(["success" => false, "error" => "Datos o Sistema no recibidos"]);
     exit;
 }
 
-// 2. FORZAR CAMBIO DE BASE DE DATOS SEGÚN EL SYSTEM
-$target_db = $data['system']; // "mixtura" o "mecapos"
+$target_db = $data['system'];
 
 try {
-    // Ejecutamos un comando SQL para cambiar de base de datos en caliente
-    // Esto hace que todas las consultas siguientes se hagan en 'mixtura'
+    // Cambiamos a la base de datos seleccionada
     $pdo->exec("USE `$target_db` "); 
 } catch (PDOException $e) {
-    echo json_encode(["success" => false, "error" => "No existe la BD: " . $target_db]);
+    echo json_encode(["success" => false, "error" => "Base de datos no encontrada"]);
     exit;
 }
 
@@ -33,9 +33,11 @@ try {
 
     // --- 1. INSERTAR O ACTUALIZAR PRODUCTO ---
     if (isset($p['id_product']) && $p['id_product'] > 0) {
-        $sql = "UPDATE products SET nombre_producto=?, price=?, id_category=?, time_prep=? WHERE id_product=?";
+        // MODO EDICIÓN
+        $sql = "UPDATE products SET nombre_producto=?, alias=?, price=?, id_category=?, time_prep=? WHERE id_product=?";
         $pdo->prepare($sql)->execute([
             $p['nombre_producto'], 
+            $p['alias'] ?? '', 
             $p['price'], 
             $p['id_category'], 
             $p['time_prep'] ?? 0, 
@@ -43,14 +45,16 @@ try {
         ]);
         $id_product = $p['id_product'];
         
-        // Limpiar para evitar duplicados
+        // Limpiamos relaciones antiguas para re-insertar
         $pdo->prepare("DELETE FROM product_ingredient WHERE id_product = ?")->execute([$id_product]);
         $pdo->prepare("DELETE FROM product_kitchen WHERE product_id = ?")->execute([$id_product]);
     } else {
-        $sql = "INSERT INTO products (nombre_producto, price, id_category, time_prep, state) VALUES (?, ?, ?, ?, 'active')";
+        // MODO CREACIÓN
+        $sql = "INSERT INTO products (nombre_producto, alias, price, id_category, time_prep, state) VALUES (?, ?, ?, ?, ?, 'active')";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
             $p['nombre_producto'], 
+            $p['alias'] ?? '', 
             $p['price'], 
             $p['id_category'], 
             $p['time_prep'] ?? 0
@@ -63,7 +67,7 @@ try {
         $sqlR = "INSERT INTO product_ingredient (id_product, id_ingredient, cant_us) VALUES (?, ?, ?)";
         $stmtR = $pdo->prepare($sqlR);
         foreach ($data['recipe'] as $item) {
-            if ($item['id_ingredient']) {
+            if (!empty($item['id_ingredient'])) {
                 $stmtR->execute([$id_product, $item['id_ingredient'], $item['cant_us']]);
             }
         }
@@ -79,11 +83,10 @@ try {
     }
 
     $pdo->commit();
-    echo json_encode(["success" => true, "id" => $id_product, "db_used" => $target_db]);
+    echo json_encode(["success" => true, "id" => $id_product]);
 
 } catch (Exception $e) {
-    if ($pdo->inTransaction()) {
-        $pdo->rollBack();
-    }
+    if ($pdo->inTransaction()) { $pdo->rollBack(); }
     echo json_encode(["success" => false, "error" => $e->getMessage()]);
 }
+?>
