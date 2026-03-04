@@ -16,6 +16,7 @@ try {
             od.product_id,
             od.quantity,
             od.status,
+             od.alert_status,
             o.table_id,
             o.order_date,
             p.nombre_producto AS name,

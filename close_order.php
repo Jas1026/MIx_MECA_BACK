@@ -18,33 +18,40 @@ if (!$order_id) {
 try {
     $pdo->beginTransaction();
 
-    // 1️⃣ Obtener mesa y fecha de creación para calcular el tiempo
-    $stmt = $pdo->prepare("SELECT table_id, order_date FROM orders WHERE order_id = ?");
-    $stmt->execute([$order_id]);
-    $order = $stmt->fetch(PDO::FETCH_ASSOC);
+    // 1️⃣ Obtenemos los segundos totales transcurridos desde la DB
+    $stmtTime = $pdo->prepare("
+        SELECT table_id, TIMESTAMPDIFF(SECOND, order_date, NOW()) as segundos_totales
+        FROM orders 
+        WHERE order_id = ?
+    ");
+    $stmtTime->execute([$order_id]);
+    $orderData = $stmtTime->fetch(PDO::FETCH_ASSOC);
 
-    if (!$order) {
+    if (!$orderData) {
         throw new Exception("Orden no encontrada");
     }
 
-    $table_id = $order['table_id'];
-    $fecha_inicio = new DateTime($order['order_date']);
-    $fecha_fin = new DateTime(); // Ahora mismo
-    
-    // Calcular diferencia en minutos
-    $intervalo = $fecha_inicio->diff($fecha_fin);
-    $minutos_transcurridos = ($intervalo->days * 24 * 60) + ($intervalo->h * 60) + $intervalo->i;
+    $table_id = $orderData['table_id'];
+    $segundos_totales = (int)$orderData['segundos_totales'];
 
-    // 2️⃣ Cerrar orden y guardar el tiempo real (actual_time)
+    // 2️⃣ Convertimos a formato visual (Ejemplo: 100 segundos -> 1.40)
+    $minutos = floor($segundos_totales / 60);
+    $segundos_restantes = $segundos_totales % 60;
+    
+    // Creamos el número: Minutos + (Segundos / 100)
+    // Así 1 min y 40 seg se convierte en 1.40
+    $tiempo_visual = $minutos + ($segundos_restantes / 100);
+
+    // 3️⃣ Actualizar la orden con el tiempo formateado
     $stmtUpdate = $pdo->prepare("
         UPDATE orders 
         SET status = 'closed', 
             actual_time = ? 
         WHERE order_id = ?
     ");
-    $stmtUpdate->execute([$minutos_transcurridos, $order_id]);
+    $stmtUpdate->execute([$tiempo_visual, $order_id]);
 
-    // 3️⃣ Liberar mesa
+    // 4️⃣ Liberar la mesa
     $pdo->prepare("UPDATE cafe_tables SET estado = 'Libre' WHERE id_table = ?")
         ->execute([$table_id]);
 
@@ -53,7 +60,7 @@ try {
     echo json_encode([
         "error" => 0, 
         "message" => "Pedido entregado", 
-        "tiempo_total" => $minutos_transcurridos
+        "tiempo_registrado" => number_format($tiempo_visual, 2)
     ]);
 
 } catch (Exception $e) {

@@ -7,12 +7,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') { exit(0); }
 
 include('dbconnect.php');
 
+// Recibimos los datos
 $id_table = $_POST['id_table'] ?? null;
 $id_user = $_POST['id_user'] ?? null;
 $products = isset($_POST['products']) ? json_decode($_POST['products'], true) : [];
 
 if (!$id_table || !$id_user || empty($products)) {
-    echo json_encode(["error"=>1,"message"=>"Datos incompletos"]);
+    echo json_encode(["error" => 1, "message" => "Datos incompletos"]);
     exit;
 }
 
@@ -20,10 +21,9 @@ try {
     $pdo->beginTransaction();
 
     // --- ALGORITMO DE TIEMPO ESTIMADO ---
-    $estaciones = []; // Para guardar la suma por kitchen_id
+    $estaciones = []; 
 
     foreach ($products as $p) {
-        // Obtenemos el tiempo de preparación y la cocina del producto
         $stmtP = $pdo->prepare("
             SELECT p.time_prep, pk.kitchen_id 
             FROM products p
@@ -36,18 +36,15 @@ try {
         $t_prep = $info ? (int)$info['time_prep'] : 0;
         $k_id = $info ? $info['kitchen_id'] : 0;
 
-        // Sumamos el tiempo a su estación correspondiente
         if (!isset($estaciones[$k_id])) {
             $estaciones[$k_id] = 0;
         }
-        // Multiplicamos tiempo por cantidad (opcional, según tu política de cocina)
         $estaciones[$k_id] += $t_prep; 
     }
 
-    // El tiempo estimado de la orden es el MAX de las sumas de las estaciones
     $estimated_time = !empty($estaciones) ? max($estaciones) : 0;
 
-    // 1️⃣ Crear pedido con el tiempo estimado calculado
+    // 1️⃣ Crear la cabecera del pedido (ORDERS)
     $stmt = $pdo->prepare("
         INSERT INTO orders 
         (table_id, user_id, order_date, status, estimated_time, actual_time)
@@ -56,46 +53,58 @@ try {
     $stmt->execute([$id_table, $id_user, $estimated_time]);
     $id_order = $pdo->lastInsertId();
 
-    // 2️⃣ Insertar detalles (esta parte se mantiene para el registro individual)
+    // 2️⃣ Insertar los detalles (ORDER_DETAILS)
+    // Preparamos la consulta una sola vez fuera del bucle por eficiencia
+    $stmtDetail = $pdo->prepare("
+        INSERT INTO order_details
+        (order_id, product_id, kitchen_id, quantity, unit_price, total_price, preparation_time, status, notes, sides)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ");
+
     foreach ($products as $p) {
+        // Obtenemos el kitchen_id para este producto específico
         $stmtKitchen = $pdo->prepare("SELECT kitchen_id FROM product_kitchen WHERE product_id = ?");
         $stmtKitchen->execute([$p['id_product']]);
         $kitchen = $stmtKitchen->fetch(PDO::FETCH_ASSOC);
         $kitchen_id = $kitchen ? $kitchen['kitchen_id'] : null;
 
-        $total_price = $p['price'] * $p['quantity'];
+        $total_price = (float)$p['price'] * (int)$p['quantity'];
+        $notes = !empty($p['notes']) ? $p['notes'] : null;
+        $sides = !empty($p['sides']) ? $p['sides'] : null;
 
-        $stmtDetail = $pdo->prepare("
-            INSERT INTO order_details
-            (order_id, product_id, kitchen_id, quantity, unit_price, total_price, preparation_time, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ");
-
+        // EJECUCIÓN CON 10 PARÁMETROS EXACTOS
         $stmtDetail->execute([
-            $id_order,
-            $p['id_product'],
-            $kitchen_id,
-            $p['quantity'],
-            $p['price'],
-            $total_price,
-            0, // Aquí podrías poner el time_prep individual si lo necesitas
-            'pending'
+            $id_order,           // 1. order_id
+            $p['id_product'],    // 2. product_id
+            $kitchen_id,         // 3. kitchen_id
+            $p['quantity'],      // 4. quantity
+            $p['price'],         // 5. unit_price
+            $total_price,        // 6. total_price
+            0,                   // 7. preparation_time (inicial)
+            'pending',           // 8. status
+            $notes,              // 9. notes
+            $sides               // 10. sides
         ]);
     }
 
-    // 3️⃣ Actualizar Mesa
-    $pdo->prepare("UPDATE cafe_tables SET estado = 'Pendiente' WHERE id_table = ?")
-        ->execute([$id_table]);
+    // 3️⃣ Actualizar el estado de la mesa
+    $stmtUpdateTable = $pdo->prepare("UPDATE cafe_tables SET estado = 'Pendiente' WHERE id_table = ?");
+    $stmtUpdateTable->execute([$id_table]);
 
     $pdo->commit();
 
     echo json_encode([
         "error" => 0, 
         "id_order" => $id_order, 
-        "estimated_minutes" => $estimated_time
+        "estimated_minutes" => $estimated_time,
+        "message" => "Pedido creado con éxito"
     ]);
 
 } catch (Exception $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
-    echo json_encode(["error"=>1,"message"=>$e->getMessage()]);
+    echo json_encode([
+        "error" => 1, 
+        "message" => "Error en servidor: " . $e->getMessage()
+    ]);
 }
+?>

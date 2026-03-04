@@ -9,7 +9,7 @@ require_once 'dbconnect.php';
 
 try {
 
-    $stmt = $pdo->query("
+   $stmt = $pdo->query("
     SELECT 
         o.order_id,
         o.user_id,
@@ -17,6 +17,8 @@ try {
         o.client_name,
         o.client_nit,
         o.order_date,    
+        o.estimated_time,
+        o.actual_time,
         u.code as mesero
     FROM orders o
     INNER JOIN user u ON o.user_id = u.id

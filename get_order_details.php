@@ -6,51 +6,38 @@ header("Access-Control-Allow-Headers: Content-Type");
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit(0);
 }
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
 
-header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json");
-
 require_once 'dbconnect.php';
 
-// Intentar GET primero
-$order_id = $_GET['order_id'] ?? null;
-
-// Si no viene por GET, intentar POST (FormData)
-if (!$order_id) {
-    $order_id = $_POST['order_id'] ?? null;
-}
+// Intentar obtener order_id de cualquier método
+$order_id = $_GET['order_id'] ?? $_POST['order_id'] ?? null;
 
 if (!$order_id) {
     echo json_encode([
-        "error"=>1,
-        "message"=>"Falta order_id"
+        "error" => 1,
+        "message" => "Falta order_id"
     ]);
     exit;
 }
 
-if (!$order_id) {
-    echo json_encode(["error"=>1,"message"=>"Falta order_id"]);
-    exit;
-}
-
 try {
-
+    // 1. Agregamos od.notes y od.sides a la consulta SQL
     $stmt = $pdo->prepare("
-SELECT 
-    od.product_id,
-    od.quantity,
-    od.unit_price,
-    (od.quantity * od.unit_price) AS total_price,
-    p.nombre_producto
-FROM order_details od
-INNER JOIN products p ON od.product_id = p.id_product
-WHERE od.order_id = ?
+        SELECT 
+            od.product_id,
+            od.quantity,
+            od.unit_price,
+            (od.quantity * od.unit_price) AS total_price,
+            od.notes,
+            od.sides,
+            p.nombre_producto
+        FROM order_details od
+        INNER JOIN products p ON od.product_id = p.id_product
+        WHERE od.order_id = ?
     ");
 
     $stmt->execute([$order_id]);
-
     $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     echo json_encode([
@@ -59,9 +46,8 @@ WHERE od.order_id = ?
     ]);
 
 } catch (PDOException $e) {
-
     echo json_encode([
-        "error"=>1,
-        "message"=>$e->getMessage()
+        "error" => 1,
+        "message" => "Error de BD: " . $e->getMessage()
     ]);
 }
