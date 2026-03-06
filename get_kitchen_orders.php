@@ -11,23 +11,25 @@ try {
 
     $stmt = $pdo->prepare("
         SELECT 
-            od.detail_id,
-            od.order_id,
-            od.product_id,
-            od.quantity,
-            od.status,
-             od.alert_status,
-            o.table_id,
-            o.order_date,
-            p.nombre_producto AS name,
-            p.time_prep
-        FROM order_details od
-        INNER JOIN orders o ON o.order_id = od.order_id
-        INNER JOIN products p ON p.id_product = od.product_id
-        WHERE od.kitchen_id = ?
-        AND od.status = 'pending'
-        AND o.status NOT IN ('paid','closed')
-        ORDER BY o.order_date ASC
+    od.detail_id,
+    od.order_id,
+    od.product_id,
+    od.quantity,
+    od.status,
+    od.alert_status,
+    od.notes,            -- 👈 AGREGAR
+    od.sides,            -- 👈 AGREGAR
+    o.table_id,
+    o.order_date,
+    p.nombre_producto AS name,
+    p.time_prep
+FROM order_details od
+INNER JOIN orders o ON o.order_id = od.order_id
+INNER JOIN products p ON p.id_product = od.product_id
+WHERE od.kitchen_id = ?
+AND od.status = 'pending'
+AND o.status NOT IN ('paid','closed')
+ORDER BY o.order_date ASC
     ");
 
     $stmt->execute([$kitchen_id]);
