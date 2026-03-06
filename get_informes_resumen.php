@@ -50,33 +50,18 @@ switch($filtro) {
 
 try {
 
-    /* =============================
-       1️⃣ TOTAL VENTAS
-    ==============================*/
-
-$stmtVentas = $pdo->query("
- SELECT SUM(od.quantity * od.unit_price) 
- as total_ventas
-  FROM orders o JOIN order_details od ON o.order_id = od.order_id 
-  WHERE o.status = 'closed'
-   ");
-  $totalVentas = $stmtVentas->fetch(PDO::FETCH_ASSOC)['total_ventas'] ?? 0;
-
-
-/* =============================
-   1️⃣ GANANCIAS REALES      
-   */
-
 $stmtVentas = $pdo->query("
     SELECT 
-        SUM(od.quantity * od.unit_price) as total_ventas
+        COALESCE(SUM(od.quantity * od.unit_price),0) as total_ventas
     FROM orders o
     JOIN order_details od ON o.order_id = od.order_id
-    WHERE o.status = 'closed'
+    WHERE o.status IN ('closed','paid','completed')
     $where
 ");
-$totalVentas = $stmtVentas->fetch(PDO::FETCH_ASSOC)['total_ventas'] ?? 0;
 
+$dataVentas = $stmtVentas->fetch(PDO::FETCH_ASSOC);
+$totalVentas = $dataVentas['total_ventas'];
+$gananciaTotal = $totalVentas;
     /* =============================
        2️⃣ TOP PRODUCTOS
     ==============================*/
@@ -231,13 +216,13 @@ $productoLento = $stmtRetraso->fetch(PDO::FETCH_ASSOC);
 
 
 
-/* =============================
-   RESPUESTA FINAL  
-        =====================*/
-        $stmtOrdenes = $pdo->query("
+ /* =============================
+   ÓRDENES CERRADAS
+=============================*/
+
+$stmtOrdenes = $pdo->query("
     SELECT 
         o.order_id,
-        o.order_date,
         p.nombre_producto,
         od.quantity,
         od.unit_price,
@@ -246,7 +231,9 @@ $productoLento = $stmtRetraso->fetch(PDO::FETCH_ASSOC);
     JOIN order_details od ON o.order_id = od.order_id
     JOIN products p ON od.product_id = p.id_product
     WHERE o.status = 'closed'
+    $where
 ");
+
 $ordenes = $stmtOrdenes->fetchAll(PDO::FETCH_ASSOC);
 
 
@@ -415,44 +402,62 @@ $stmtCategoriaTop = $pdo->query("
     $where
     GROUP BY c.id
     ORDER BY total_ganancia DESC
-    LIMIT 5
+    LIMIT 1
 ");
 
 $categoriaTop = $stmtCategoriaTop->fetch(PDO::FETCH_ASSOC);
 
 
+/* =============================
+   RESPUESTA FINAL
+=============================*/
+
 echo json_encode([
     "error" => 0,
     "resumen" => [
-        "total_dinero" => round($totalVentas, 2),
-       "ganancia_total" => round($totalVentas, 2),
-        "activos_conteo" => $activosVivos,
-        "top_productos" => $topProductos,
-        "alertas_inventario" => $alertasStock,
-        "mesa_top" => $mesaTop,
-        "mesa_low" => $mesaLow,                 // 👈 AGREGAR
-        "mesero_top" => $meseroTop,
-"meseros" => $meseros,
-        "areas_top" => $areasTop,
-        "horas_pico" => $horasPico,
-        "stock_minimo" => $stockMin,            // 👈 CAMBIAR NOMBRE
-        "producto_mas_lento" => $productoLento,
-        "ingredientes_top" => $ingredientes,
-"ingrediente_mas_usado" => $ingredienteMasUsado,
-"ingrediente_menos_usado" => $ingredienteMenosUsado,  // 👈 CAMBIAR NOMBRE
-"producto_mas_usado" => $productoTop,
-"producto_menos_usado" => $productoLow,
-"pedido_mayor_retraso" => $pedidoMayorRetraso,
-"meseros_retraso" => $meserosRetraso,
-"categoria_top" => $categoriaTop,
-"ventas_alcohol" => [
-    "con" => $ventasAlcohol['con_alcohol'] ?? 0,
-    "sin" => $ventasAlcohol['sin_alcohol'] ?? 0
-],
-"meseros_retraso" => $meseros_retraso,
-     ]
+        "total_dinero" => round($totalVentas ?? 0, 2),
+        "ganancia_total" => round($totalVentas ?? 0, 2),
+
+        "activos_conteo" => $activosVivos ?? 0,
+
+        "top_productos" => $topProductos ?? [],
+        "alertas_inventario" => $alertasStock ?? [],
+
+        "mesa_top" => $mesaTop ?? null,
+        "mesa_low" => $mesaLow ?? null,
+
+        "mesero_top" => $meseroTop ?? null,
+        "meseros" => $meseros ?? [],
+
+        "areas_top" => $areasTop ?? [],
+        "horas_pico" => $horasPico ?? [],
+
+        "stock_minimo" => $stockMin ?? [],
+        "producto_mas_lento" => $productoLento ?? null,
+
+        "ingredientes_top" => $ingredientes ?? [],
+        "ingrediente_mas_usado" => $ingredienteMasUsado ?? null,
+        "ingrediente_menos_usado" => $ingredienteMenosUsado ?? null,
+
+        "producto_mas_usado" => $productoTop ?? null,
+        "producto_menos_usado" => $productoLow ?? null,
+
+        "pedido_mayor_retraso" => $pedidoMayorRetraso ?? null,
+        "meseros_retraso" => $meserosRetraso ?? [],
+
+        "categoria_top" => $categoriaTop ?? [
+            "name" => "Sin datos",
+            "total_ganancia" => 0
+        ],
+
+        "ventas_alcohol" => [
+            "con" => $ventasAlcohol['con_alcohol'] ?? 0,
+            "sin" => $ventasAlcohol['sin_alcohol'] ?? 0
+        ],
+
+        "ordenes" => $ordenes   // 👈 IMPORTANTE
+    ]
 ]);
- 
  
  
 } catch (PDOException $e) {
