@@ -9,11 +9,12 @@ require_once 'dbconnect.php';
 
 try {
 
-   $stmt = $pdo->query("
+$stmt = $pdo->query("
     SELECT 
         o.order_id,
         o.user_id,
         o.status,
+        o.cancel,
         o.client_name,
         o.client_nit,
         o.order_date,    
@@ -25,18 +26,18 @@ try {
     ORDER BY o.order_id DESC
 ");
 
-    $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    echo json_encode([
-        "error"=>0,
-        "data"=>$data
-    ]);
+echo json_encode([
+    "error"=>0,
+    "data"=>$data
+]);
 
 } catch (PDOException $e) {
 
-    echo json_encode([
-        "error"=>1,
-        "message"=>$e->getMessage()
-    ]);
+echo json_encode([
+    "error"=>1,
+    "message"=>$e->getMessage()
+]);
 
 }

@@ -9,22 +9,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 
 include('dbconnect.php');
 
-$id_category = $_POST['id_category'] ?? '';
+$term = $_POST['term'] ?? '';
 
 $stmt = $pdo->prepare("
-  SELECT 
-    id_product, 
-    nombre_producto AS name, 
-    price 
-  FROM products 
-  WHERE id_category = ?
-  AND state = 'active'
+SELECT 
+  id_product,
+  nombre_producto AS name,
+  price
+FROM products
+WHERE nombre_producto LIKE ?
+LIMIT 20
 ");
 
-$stmt->execute([$id_category]);
+$stmt->execute(["%$term%"]);
+
+$data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 echo json_encode([
-    "error" => 0,
-    "data" => $stmt->fetchAll(PDO::FETCH_ASSOC)
+  "error" => 0,
+  "data" => $data
 ]);
-?>
