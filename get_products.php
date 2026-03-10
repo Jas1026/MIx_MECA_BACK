@@ -22,6 +22,7 @@ try {
         SELECT 
             id_product,
             nombre_producto,
+            alias,
             price,
             time_prep,
             state,

@@ -29,6 +29,14 @@ if (!$data) {
 }
 
 try {
+    // Verificar si ya existe para evitar duplicados accidentales
+    $check = $pdo->prepare("SELECT id_ingredients FROM ingredients WHERE nombre = :nombre LIMIT 1");
+    $check->execute([":nombre" => $data["nombre"]]);
+    
+    if ($check->fetch()) {
+        echo json_encode(["success" => false, "error" => "El ingrediente ya existe"]);
+        exit;
+    }
     $sql = "INSERT INTO ingredients 
             (nombre, stock_act, unidad_med, tipo, peso_envase, peso_actual, capacidad_total)
             VALUES 

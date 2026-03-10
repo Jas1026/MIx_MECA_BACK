@@ -10,18 +10,19 @@ $kitchen_id = $_POST['kitchen_id'] ?? 0;
 try {
 
     $stmt = $pdo->prepare("
-        SELECT 
+      SELECT 
     od.detail_id,
     od.order_id,
     od.product_id,
     od.quantity,
     od.status,
     od.alert_status,
-    od.notes,            -- 👈 AGREGAR
-    od.sides,            -- 👈 AGREGAR
+    od.notes,
+    od.sides,
     o.table_id,
     o.order_date,
     p.nombre_producto AS name,
+    p.alias,
     p.time_prep
 FROM order_details od
 INNER JOIN orders o ON o.order_id = od.order_id

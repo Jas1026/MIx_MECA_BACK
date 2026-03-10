@@ -1,4 +1,5 @@
 <?php
+
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
@@ -6,7 +7,7 @@ header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') { exit(0); }
 
 include('dbconnect.php');
-
+include "inventory_functions.php";
 // Recibimos los datos
 $id_table = $_POST['id_table'] ?? null;
 $id_user = $_POST['id_user'] ?? null;

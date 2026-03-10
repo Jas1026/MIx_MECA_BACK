@@ -18,7 +18,7 @@ try {
     $input = json_decode(file_get_contents("php://input"), true);
     $detail_id = $input['detail_id'] ?? ($_POST['detail_id'] ?? null);
     $status = $input['status'] ?? ($_POST['status'] ?? null);
-    $force = isset($input['force']) ? $input['force'] : ($_POST['force'] ?? 0);
+    $force = isset($input['force']) ? (bool)$input['force'] : (bool)($_POST['force'] ?? false);
 
     if (!$detail_id || !$status) {
         throw new Exception("Faltan parámetros");
@@ -26,7 +26,7 @@ try {
 
     $pdo->beginTransaction();
 
-    // 1. Obtener info del producto, cantidad y la fecha de creación del pedido original
+    // 1. Obtener info del producto y cantidad
     $stmtProd = $pdo->prepare("
         SELECT od.product_id, od.quantity, od.order_id, o.order_date
         FROM order_details od 
@@ -41,7 +41,7 @@ try {
     // 2. Lógica de Inventario (Solo al pasar a 'ready')
     if ($status === 'ready') {
         $stmtIng = $pdo->prepare("
-            SELECT pi.id_ingredient, pi.cant_us, i.nombre, i.stock_act 
+            SELECT pi.id_ingredient, pi.cant_us, i.nombre, i.stock_act, i.tipo 
             FROM product_ingredient pi
             JOIN ingredients i ON pi.id_ingredient = i.id_ingredients
             WHERE pi.id_product = ?
@@ -49,31 +49,74 @@ try {
         $stmtIng->execute([$itemInfo['product_id']]);
         $ingredients = $stmtIng->fetchAll(PDO::FETCH_ASSOC);
 
+        // --- VALIDACIÓN PREVIA (FORCE CHECK) ---
         $insuficientes = [];
         foreach ($ingredients as $ing) {
-            $totalNecesario = $ing['cant_us'] * $itemInfo['quantity'];
+            $totalNecesario = (float)$ing['cant_us'] * (int)$itemInfo['quantity'];
             if ($ing['stock_act'] < $totalNecesario) {
                 $insuficientes[] = $ing['nombre'];
             }
         }
 
-        if (!empty($insuficientes) && $force == 0) {
+        if (!empty($insuficientes) && !$force) {
             $pdo->rollBack();
-            echo json_encode(["error" => 2, "message" => "Stock insuficiente"]);
+            echo json_encode(["error" => 2, "message" => "Stock insuficiente en: " . implode(", ", $insuficientes)]);
             exit;
         }
 
+        // --- PROCESO DE DESCUENTO ---
         foreach ($ingredients as $ing) {
-            $totalDescontar = $ing['cant_us'] * $itemInfo['quantity'];
-            $pdo->prepare("UPDATE ingredients SET stock_act = stock_act - ? WHERE id_ingredients = ?")
-                ->execute([$totalDescontar, $ing['id_ingredient']]);
+            $id_ing = $ing['id_ingredient'];
+            $cantidadTotalADescontar = (float)$ing['cant_us'] * (int)$itemInfo['quantity'];
+
+            // A. Descontar del Stock General (siempre)
+            $stmtUpdateStock = $pdo->prepare("UPDATE ingredients SET stock_act = stock_act - ? WHERE id_ingredients = ?");
+            $stmtUpdateStock->execute([$cantidadTotalADescontar, $id_ing]);
+
+            // B. Si es BOTELLA, aplicamos lógica de cascada
+            if ($ing['tipo'] === 'botella') {
+                $restantePorDescontar = $cantidadTotalADescontar;
+
+                // Buscamos botellas ABIERTAS ordenadas por la que tiene MENOS contenido neto
+                $stmtBottles = $pdo->prepare("
+                    SELECT id_bottle, peso_actual, peso_envase, (peso_actual - peso_envase) as contenido_neto 
+                    FROM ingredient_bottles 
+                    WHERE ingredient_id = ? AND estado = 'abierta'
+                    ORDER BY (peso_actual - peso_envase) ASC
+                ");
+                $stmtBottles->execute([$id_ing]);
+                $openBottles = $stmtBottles->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($openBottles as $bot) {
+                    if ($restantePorDescontar <= 0) break;
+
+                    $id_bot = $bot['id_bottle'];
+                    $contenidoNetoActual = (float)$bot['contenido_neto'];
+
+                    if ($contenidoNetoActual > $restantePorDescontar) {
+                        // Caso 1: La botella tiene más de lo que necesito.
+                        // Descontamos solo lo necesario y terminamos el ciclo para este ingrediente.
+                        $stmtUpdateBot = $pdo->prepare("UPDATE ingredient_bottles SET peso_actual = peso_actual - ? WHERE id_bottle = ?");
+                        $stmtUpdateBot->execute([$restantePorDescontar, $id_bot]);
+                        
+                        $restantePorDescontar = 0;
+                    } else {
+                        // Caso 2: La botella tiene justo o MENOS de lo que necesito (ej: tiene 1g y necesito 5g)
+                        // Vaciamos la botella (peso_actual = peso_envase), la finalizamos y restamos lo que dio.
+                        $stmtFinalizar = $pdo->prepare("UPDATE ingredient_bottles SET peso_actual = peso_envase, estado = 'finalizada' WHERE id_bottle = ?");
+                        $stmtFinalizar->execute([$id_bot]);
+
+                        $restantePorDescontar -= $contenidoNetoActual;
+                    }
+                }
+                
+                // Nota: Si después del loop restantePorDescontar > 0, significa que se agotaron las botellas abiertas.
+                // El stock general ya se restó arriba, por lo que la integridad numérica se mantiene.
+            }
         }
     }
 
-    // 3. ACTUALIZAR ESTADO Y CALCULAR TIEMPO REAL (preparation_time)
-    // Usamos TIMESTAMPDIFF para obtener los minutos transcurridos
-// 3. ACTUALIZAR ESTADO Y CALCULAR TIEMPO REAL CON DECIMALES
-    // Calculamos la diferencia en SEGUNDOS y dividimos entre 60.0 para obtener decimales
+    // 3. ACTUALIZAR ESTADO Y TIEMPO REAL
     $stmtUpdate = $pdo->prepare("
         UPDATE order_details od
         JOIN orders o ON od.order_id = o.order_id
@@ -100,9 +143,9 @@ try {
     }
 
     $pdo->commit();
-    echo json_encode(["error" => 0, "message" => "¡Listo! Tiempo guardado e inventario actualizado"]);
+    echo json_encode(["error" => 0, "message" => "¡Listo! Inventario procesado en cascada"]);
 
 } catch (Throwable $e) {
-    if ($pdo->inTransaction()) $pdo->rollBack();
+    if ($pdo && $pdo->inTransaction()) $pdo->rollBack();
     echo json_encode(["error" => 1, "message" => $e->getMessage()]);
 }
