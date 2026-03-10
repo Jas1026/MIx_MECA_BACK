@@ -8,7 +8,7 @@ header("Content-Type: application/json");
 
 include "dbconnect.php";
 
-// 1. Detectar sistema
+// 1. Detectar sistema y base de datos
 $system = $_GET['system'] ?? 'mixtura';
 try {
     $pdo->exec("USE `$system` ");
@@ -17,8 +17,7 @@ try {
     exit;
 }
 
-// 2. CAPTURA SINCRONIZADA CON ANGULAR
-// Cambiamos $filtro por la variable 'tipo' que envías desde Angular
+// 2. Captura de filtros desde Angular
 $tipo_filtro  = $_GET['tipo'] ?? null; 
 $fecha_inicio = $_GET['fecha_inicio'] ?? null;
 $fecha_fin    = $_GET['fecha_fin'] ?? null;
@@ -26,9 +25,8 @@ $fecha_fin    = $_GET['fecha_fin'] ?? null;
 $params = [];
 $where = " WHERE 1=1 ";
 
-// 3. Lógica de filtrado (Actualizada para reconocer 'rango_operativo')
+// 3. Lógica de filtrado por rango
 if ($tipo_filtro == "rango_operativo" && !empty($fecha_inicio) && !empty($fecha_fin)) {
-    // Convertimos a formato MySQL
     $f_start = date("Y-m-d H:i:s", strtotime($fecha_inicio));
     $f_end = date("Y-m-d H:i:s", strtotime($fecha_fin));
     
@@ -40,7 +38,7 @@ if ($tipo_filtro == "rango_operativo" && !empty($fecha_inicio) && !empty($fecha_
 try {
     /* 1️⃣ VENTAS TOTALES */
     $stmtVentas = $pdo->prepare("
-        SELECT COALESCE(SUM(od.quantity * od.unit_price),0) as total_ventas
+        SELECT COALESCE(SUM(od.quantity * od.unit_price), 0) as total_ventas
         FROM orders o
         JOIN order_details od ON o.order_id = od.order_id
         $where AND o.status IN ('closed','paid','completed')
@@ -71,12 +69,13 @@ try {
     $stmtMesaTop->execute($params);
     $mesaTop = $stmtMesaTop->fetch(PDO::FETCH_ASSOC);
 
-    // Mesa Low con subconsulta para evitar errores de sintaxis
+    // Mesa Low corregida para que respete el filtro de fecha
     $stmtMesaLow = $pdo->prepare("
-        SELECT t.nombre, 
-               (SELECT COUNT(*) FROM orders o $where AND o.table_id = t.id_table) as total_pedidos
+        SELECT t.nombre, COUNT(o.order_id) as total_pedidos
         FROM cafe_tables t
-        ORDER BY total_pedidos ASC LIMIT 1
+        LEFT JOIN orders o ON t.id_table = o.table_id
+        $where
+        GROUP BY t.id_table ORDER BY total_pedidos ASC LIMIT 1
     ");
     $stmtMesaLow->execute($params);
     $mesaLow = $stmtMesaLow->fetch(PDO::FETCH_ASSOC);
@@ -135,7 +134,7 @@ try {
     $resAlc = $stmtAlc->fetchAll(PDO::FETCH_ASSOC);
     $ventasAlcohol = ['con' => 0, 'sin' => 0];
     foreach($resAlc as $r) { 
-        $ventasAlcohol[$r['tipo_alc'] == 'con_alcohol' ? 'con' : 'sin'] = $r['total_ventas']; 
+        $ventasAlcohol[$r['tipo_alc'] == 'con_alcohol' ? 'con' : 'sin'] = (float)$r['total_ventas']; 
     }
 
     /* 8️⃣ CATEGORÍA RENTABLE */
@@ -176,7 +175,7 @@ try {
         JOIN products p ON od.product_id = p.id_product
         JOIN ingredients i ON i.id_ingredients = p.id_product 
         $where
-        GROUP BY i.id_ingredients ORDER BY total_usado DESC
+        GROUP BY i.id_ingredients ORDER BY total_usado DESC LIMIT 10
     ");
     $stmtIng->execute($params);
     $ingredientes = $stmtIng->fetchAll(PDO::FETCH_ASSOC);
@@ -191,6 +190,68 @@ try {
     $stmtTiempo->execute($params);
     $ordenesTiempo = $stmtTiempo->fetch(PDO::FETCH_ASSOC);
 
+    /* 1️⃣1️⃣ PRODUCTO INDIVIDUAL (TOP Y LOW) */
+    $stmtProductoTop = $pdo->prepare("
+        SELECT p.nombre_producto, SUM(od.quantity) as total_vendido
+        FROM orders o
+        JOIN order_details od ON o.order_id = od.order_id
+        JOIN products p ON od.product_id = p.id_product
+        $where AND o.status IN ('closed','paid','completed')
+        GROUP BY p.id_product ORDER BY total_vendido DESC LIMIT 1
+    ");
+    $stmtProductoTop->execute($params);
+    $productoTop = $stmtProductoTop->fetch(PDO::FETCH_ASSOC);
+
+    $stmtProductoLow = $pdo->prepare("
+        SELECT p.nombre_producto, SUM(od.quantity) as total_vendido
+        FROM orders o
+        JOIN order_details od ON o.order_id = od.order_id
+        JOIN products p ON od.product_id = p.id_product
+        $where AND o.status IN ('closed','paid','completed')
+        GROUP BY p.id_product ORDER BY total_vendido ASC LIMIT 1
+    ");
+    $stmtProductoLow->execute($params);
+    $productoLow = $stmtProductoLow->fetch(PDO::FETCH_ASSOC);
+
+    /* 1️⃣3️⃣ PRODUCTOS LENTOS (MAYOR TIEMPO DE PREPARACIÓN) */
+$stmtLentos = $pdo->prepare("
+    SELECT 
+        p.nombre_producto, 
+        COUNT(o.order_id) as veces_pedido,
+        ROUND(AVG(actual_time), 1) as tiempo_promedio
+    FROM orders o
+    JOIN order_details od ON o.order_id = od.order_id
+    JOIN products p ON od.product_id = p.id_product
+    $where AND o.status IN ('closed','paid','completed')
+    GROUP BY p.id_product 
+    ORDER BY tiempo_promedio DESC 
+    LIMIT 5
+");
+$stmtLentos->execute($params);
+$productosLentos = $stmtLentos->fetchAll(PDO::FETCH_ASSOC);
+
+// 14. STOCK MÍNIMO (Ingredientes)
+    $stmtStock = $pdo->query("SELECT nombre, stock_act, unidad_med FROM ingredients ORDER BY stock_act ASC LIMIT 1");
+    $stockMin = $stmtStock->fetch(PDO::FETCH_ASSOC);
+
+
+/* 2️⃣ TOP PRODUCTOS GENERALES (Comida, Bebida, etc.) */
+$stmtTopGeneral = $pdo->prepare("
+    SELECT p.nombre_producto, SUM(od.quantity) as cantidad 
+    FROM orders o
+    JOIN order_details od ON o.order_id = od.order_id
+    JOIN products p ON od.product_id = p.id_product
+    $where AND o.status IN ('closed','paid','completed')
+    GROUP BY p.id_product 
+    ORDER BY cantidad DESC 
+    LIMIT 5
+");
+$stmtTopGeneral->execute($params);
+$topProductosGlobal = $stmtTopGeneral->fetchAll(PDO::FETCH_ASSOC);
+
+
+// LUEGO, añade esto dentro del array "resumen" en el echo json_encode:
+// "productos_lentos" => $productosLentos
     // 4. RESPUESTA FINAL
     echo json_encode([
         "error" => 0,
@@ -204,9 +265,11 @@ try {
             "fin" => $params[':fin'] ?? 'No definido'
         ],
         "resumen" => [
-            "total_dinero" => round($totalVentas, 2),
-            "ganancia_total" => round($totalVentas, 2),
+            "total_dinero" => round((float)$totalVentas, 2),
+            "ganancia_total" => round((float)$totalVentas, 2),
             "top_productos" => $topProductos,
+            "producto_top" => $productoTop ?: ["nombre_producto" => "N/A", "total_vendido" => 0],
+            "producto_low" => $productoLow ?: ["nombre_producto" => "N/A", "total_vendido" => 0],
             "mesa_top" => $mesaTop ?: ["nombre" => "N/A", "total_pedidos" => 0],
             "mesa_low" => $mesaLow ?: ["nombre" => "N/A", "total_pedidos" => 0],
             "mesero_top" => $meseroTop ?: ["name" => "N/A", "total_ventas" => 0],
@@ -214,6 +277,9 @@ try {
             "areas_top" => $areasTop,
             "horas_pico" => $horasPico,
             "ventas_alcohol" => $ventasAlcohol,
+            "stock_minimo" => $stockMin,
+"top_alcohol_productos" => $topProductosGlobal,
+            "productos_lentos" => $productosLentos, // <--- NUEVO
             "categoria_top" => [
                 "nombre" => $categoriaTop['name'] ?? "N/A",
                 "ganancia_total" => $categoriaTop['total_ganancia'] ?? 0,
