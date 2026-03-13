@@ -15,7 +15,7 @@ $stmt = $pdo->prepare("
   SELECT 
     id_product, 
     nombre_producto AS name, 
-    price 
+    price , stock_disponible
   FROM products 
   WHERE id_category = ?
   AND state = 'active'

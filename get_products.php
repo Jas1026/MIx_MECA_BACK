@@ -14,6 +14,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once 'dbconnect.php';
 
+// Nota: Asegúrate de que tu dbconnect.php use la variable $system 
+// si manejas múltiples bases de datos, de lo contrario usará la por defecto.
 $system = $_POST['system'] ?? '';
 
 try {
@@ -26,7 +28,10 @@ try {
             price,
             time_prep,
             state,
-            id_category
+            id_category,
+            stock_congelado,   -- <--- Nueva Columna
+            stock_disponible,   -- <--- Nueva Columna
+            stock_minimo
         FROM products
         ORDER BY nombre_producto ASC
     ");
@@ -47,3 +52,4 @@ try {
         "message" => $e->getMessage()
     ]);
 }
+?>
