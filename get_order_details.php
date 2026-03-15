@@ -22,19 +22,22 @@ if (!$order_id) {
 }
 
 try {
-    // 1. Agregamos od.notes y od.sides a la consulta SQL
+    // IMPORTANTE: Seleccionar od.detail_id y od.estado_pago
     $stmt = $pdo->prepare("
         SELECT 
+            od.detail_id, 
+            od.order_id,
             od.product_id,
             od.quantity,
             od.unit_price,
-            (od.quantity * od.unit_price) AS total_price,
+            od.total_price,
             od.notes,
             od.sides,
+            od.estado_pago,
             p.nombre_producto
         FROM order_details od
         INNER JOIN products p ON od.product_id = p.id_product
-        WHERE od.order_id = ?
+        WHERE od.order_id = ? AND od.status != 'canceled'
     ");
 
     $stmt->execute([$order_id]);
