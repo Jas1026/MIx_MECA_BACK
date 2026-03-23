@@ -5,8 +5,9 @@ header("Content-Type: application/json");
 
 include "dbconnect.php";
 
-$system = $_GET['system'] ?? 'mixtura';
-$area   = $_GET['area'] ?? null;
+// Cambia $_GET por $_REQUEST para que detecte el Payload de Angular
+$system = $_REQUEST['system'] ?? 'mixtura';
+$area   = $_REQUEST['area'] ?? null;
 
 if(!$area){
     echo json_encode(["error" => 1, "message" => "Área requerida"]);

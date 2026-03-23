@@ -119,23 +119,22 @@ try {
     $stmtHoras->execute($params);
     $horasPico = $stmtHoras->fetchAll(PDO::FETCH_ASSOC);
 
-    /* 7️⃣ ANALÍTICA ALCOHOL */
-    $stmtAlc = $pdo->prepare("
-        SELECT CASE WHEN c.name LIKE '%ALCOHOL%' THEN 'con_alcohol' ELSE 'sin_alcohol' END as tipo_alc,
-        SUM(od.quantity * od.unit_price) as total_ventas
-        FROM orders o
-        JOIN order_details od ON o.order_id = od.order_id
-        JOIN products p ON od.product_id = p.id_product
-        JOIN category c ON p.id_category = c.id
-        $where AND o.status IN ('closed','paid','completed')
-        GROUP BY tipo_alc
-    ");
-    $stmtAlc->execute($params);
-    $resAlc = $stmtAlc->fetchAll(PDO::FETCH_ASSOC);
-    $ventasAlcohol = ['con' => 0, 'sin' => 0];
-    foreach($resAlc as $r) { 
-        $ventasAlcohol[$r['tipo_alc'] == 'con_alcohol' ? 'con' : 'sin'] = (float)$r['total_ventas']; 
-    }
+   /* VENTAS POR CATEGORIA AUTOMATICO */
+$stmtCategorias = $pdo->prepare("
+    SELECT 
+        c.name AS categoria,
+        SUM(od.quantity * od.unit_price) AS total_ventas
+    FROM orders o
+    JOIN order_details od ON o.order_id = od.order_id
+    JOIN products p ON od.product_id = p.id_product
+    JOIN category c ON p.id_category = c.id
+    $where AND o.status IN ('closed','paid','completed')
+    GROUP BY c.id
+    ORDER BY total_ventas DESC
+");
+
+$stmtCategorias->execute($params);
+$ventasCategorias = $stmtCategorias->fetchAll(PDO::FETCH_ASSOC);
 
     /* 8️⃣ CATEGORÍA RENTABLE */
     $stmtCat = $pdo->prepare("
@@ -250,6 +249,33 @@ $stmtTopGeneral->execute($params);
 $topProductosGlobal = $stmtTopGeneral->fetchAll(PDO::FETCH_ASSOC);
 
 
+
+/* PAGOS POR EMPLEADO (TODOS LOS EMPLEADOS) */
+$stmtPagosEmpleado = $pdo->prepare("
+    SELECT 
+        u.id,
+        u.name,
+
+        COALESCE(SUM(CASE WHEN pr.metodo_pago = 'efectivo' THEN pr.monto_total END),0) as efectivo,
+        COALESCE(SUM(CASE WHEN pr.metodo_pago = 'qr' THEN pr.monto_total END),0) as qr,
+        COALESCE(SUM(CASE WHEN pr.metodo_pago = 'tarjeta' THEN pr.monto_total END),0) as tarjeta,
+
+        COALESCE(SUM(pr.monto_total),0) as total_ventas
+
+    FROM user u
+
+    LEFT JOIN orders o ON o.user_id = u.id
+    LEFT JOIN pagos_realizados pr ON pr.order_id = o.order_id
+
+    $where
+
+    GROUP BY u.id
+    ORDER BY total_ventas DESC
+");
+
+$stmtPagosEmpleado->execute($params);
+$empleadosPagos = $stmtPagosEmpleado->fetchAll(PDO::FETCH_ASSOC);
+
 // LUEGO, añade esto dentro del array "resumen" en el echo json_encode:
 // "productos_lentos" => $productosLentos
     // 4. RESPUESTA FINAL
@@ -267,6 +293,7 @@ $topProductosGlobal = $stmtTopGeneral->fetchAll(PDO::FETCH_ASSOC);
         "resumen" => [
             "total_dinero" => round((float)$totalVentas, 2),
             "ganancia_total" => round((float)$totalVentas, 2),
+            
             "top_productos" => $topProductos,
             "producto_top" => $productoTop ?: ["nombre_producto" => "N/A", "total_vendido" => 0],
             "producto_low" => $productoLow ?: ["nombre_producto" => "N/A", "total_vendido" => 0],
@@ -275,6 +302,8 @@ $topProductosGlobal = $stmtTopGeneral->fetchAll(PDO::FETCH_ASSOC);
             "mesero_top" => $meseroTop ?: ["name" => "N/A", "total_ventas" => 0],
             "meseros" => $meserosResult,
             "areas_top" => $areasTop,
+"empleados_pagos" => $empleadosPagos,
+"ventas_categorias" => $ventasCategorias,
             "horas_pico" => $horasPico,
             "ventas_alcohol" => $ventasAlcohol,
             "stock_minimo" => $stockMin,
