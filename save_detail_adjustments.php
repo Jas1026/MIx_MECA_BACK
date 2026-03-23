@@ -1,76 +1,58 @@
 <?php
-
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
 header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
-header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
-header("Content-Type: application/json; charset=UTF-8");
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
+    exit;
 }
 
 require_once 'dbconnect.php';
 
 try {
+    // Recibimos por POST normal (FormData)
+    $detail_id = $_POST['detail_id'] ?? null;
+    $system = $_POST['system'] ?? null;
+    $adjustments_raw = $_POST['adjustments'] ?? '[]';
+    
+    // Decodificamos el string JSON que viene en el FormData
+    $adjustments = json_decode($adjustments_raw, true);
 
-    $input = json_decode(file_get_contents("php://input"), true);
-
-    $detail_id = $input['detail_id'] ?? null;
-    $adjustments = $input['adjustments'] ?? [];
-    $system = $input['system'] ?? ($_POST['system'] ?? null);
-
-    if (!$detail_id) {
-        throw new Exception("detail_id requerido");
+    if (!$detail_id || !$system) {
+        throw new Exception("Faltan datos obligatorios (detail_id o system)");
     }
 
-    if (!$system) {
-        throw new Exception("system requerido");
-    }
-
-    // 🔥 Cambiar base de datos según sistema
-    $pdo->exec("USE `$system`");
-
+    $pdo->exec("USE `$system` ");
     $pdo->beginTransaction();
 
     foreach ($adjustments as $adj) {
+        $id = $adj['ingredient_id'];
+        $qty = floatval($adj['qty']);
 
-        $ingredient_id = $adj['ingredient_id'] ?? null;
-        $qty = $adj['qty'] ?? 0;
+        if (!$id) continue;
 
-        if (!$ingredient_id) continue;
+        // 1. Validar Stock
+        $st = $pdo->prepare("SELECT stock_act, nombre FROM ingredients WHERE id_ingredients = ?");
+        $st->execute([$id]);
+        $ing = $st->fetch(PDO::FETCH_ASSOC);
 
-        $stmt = $pdo->prepare("
-            INSERT INTO order_detail_adjustments
-            (detail_id, ingredient_id, adjustment_qty)
-            VALUES (?, ?, ?)
-        ");
+        if ($qty > 0 && $ing['stock_act'] < $qty) {
+            throw new Exception("Stock insuficiente para: " . $ing['nombre']);
+        }
 
-        $stmt->execute([
-            $detail_id,
-            $ingredient_id,
-            $qty
-        ]);
+        // 2. Insertar historial de ajuste
+        $stmt = $pdo->prepare("INSERT INTO order_detail_adjustments (detail_id, ingredient_id, adjustment_qty) VALUES (?, ?, ?)");
+        $stmt->execute([$detail_id, $id, $qty]);
+
+        // 3. Descontar stock real
+        $upd = $pdo->prepare("UPDATE ingredients SET stock_act = stock_act - ? WHERE id_ingredients = ?");
+        $upd->execute([$qty, $id]);
     }
 
     $pdo->commit();
-
-    echo json_encode([
-        "error" => 0,
-        "message" => "Ajustes guardados correctamente"
-    ]);
+    echo json_encode(["error" => 0, "message" => "Ajustes guardados con éxito"]);
 
 } catch (Throwable $e) {
-
-    if ($pdo && $pdo->inTransaction()) {
-        $pdo->rollBack();
-    }
-
-    echo json_encode([
-        "error" => 1,
-        "message" => $e->getMessage()
-    ]);
+    if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
+    echo json_encode(["error" => 1, "message" => $e->getMessage()]);
 }
