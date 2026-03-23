@@ -2,18 +2,17 @@
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
-header("Content-Type: application/json");
+header("Content-Type: application/json; charset=UTF-8");
 
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') { exit(0); }
 
-include('dbconnect.php');
+require_once 'dbconnect.php';
 
-// Recibimos los datos
-$id_table = $_POST['id_table'] ?? null;
-$id_user = $_POST['id_user'] ?? null;
-$system = $_POST['system'] ?? 'mixtura';
-$products = isset($_POST['products']) ? json_decode($_POST['products'], true) : [];
-$force_order = $_POST['force_order'] ?? 'false'; // 'true' si el usuario aceptó vender sin stock
+$id_table    = $_POST['id_table'] ?? null;
+$id_user     = $_POST['id_user'] ?? null;
+$system      = $_POST['system'] ?? 'mixtura';
+$products    = isset($_POST['products']) ? json_decode($_POST['products'], true) : [];
+$force_order = $_POST['force_order'] ?? 'false';
 
 if (!$id_table || !$id_user || empty($products)) {
     echo json_encode(["error" => 1, "message" => "Datos incompletos"]);
@@ -24,112 +23,98 @@ try {
     $pdo->exec("USE `$system` ");
     $pdo->beginTransaction();
 
-    // --- 1. VALIDACIÓN DE STOCK DISPONIBLE ---
-    // Solo validamos si force_order es 'false'
-    if ($force_order !== 'true') {
-        foreach ($products as $p) {
-            $stmtStock = $pdo->prepare("SELECT stock_disponible, nombre_producto FROM products WHERE id_product = ?");
-            $stmtStock->execute([$p['id_product']]);
-            $prod = $stmtStock->fetch(PDO::FETCH_ASSOC);
+    // Array para acumular tiempos por cada cocina (ej: Cocina Caliente: 15min, Bar: 5min)
+    $kitchen_times = []; 
 
-            if ($prod && (float)$prod['stock_disponible'] < (int)$p['quantity']) {
-                $pdo->rollBack();
-                echo json_encode([
-                    "error" => 2, 
-                    "message" => "Stock insuficiente para: " . $prod['nombre_producto'] . ". Disponible: " . $prod['stock_disponible'],
-                    "product_id" => $p['id_product']
-                ]);
-                exit;
-            }
-        }
-    }
-
-    // --- 2. ALGORITMO DE TIEMPO ESTIMADO POR ESTACIÓN ---
-    $estaciones = []; 
+    // --- 🟢 NIVEL 1: VALIDACIÓN, DESCUENTOS Y CÁLCULO DE TIEMPOS ---
     foreach ($products as $p) {
+        // Obtenemos stock, tiempo y cocina
         $stmtP = $pdo->prepare("
-            SELECT p.time_prep, pk.kitchen_id 
+            SELECT p.stock_disponible, p.nombre_producto, p.time_prep, pk.kitchen_id 
             FROM products p
             LEFT JOIN product_kitchen pk ON p.id_product = pk.product_id
             WHERE p.id_product = ?
         ");
         $stmtP->execute([$p['id_product']]);
-        $info = $stmtP->fetch(PDO::FETCH_ASSOC);
+        $prod = $stmtP->fetch(PDO::FETCH_ASSOC);
 
-        $t_prep = $info ? (int)$info['time_prep'] : 0;
-        $k_id = $info ? (int)$info['kitchen_id'] : 0;
+        if ($force_order !== 'true' && (float)$prod['stock_disponible'] < (int)$p['quantity']) {
+            throw new Exception("Stock insuficiente para: " . $prod['nombre_producto']);
+        }
 
-        if (!isset($estaciones[$k_id])) { $estaciones[$k_id] = 0; }
-        $estaciones[$k_id] += ($t_prep * (int)$p['quantity']); 
+        // --- CÁLCULO DE TIEMPO POR COCINA (SUMATORIA) ---
+        $k_id = $prod['kitchen_id'] ?? 0; // 0 si no tiene cocina asignada
+        $tiempo_total_item = (int)$prod['time_prep'] * (int)$p['quantity'];
+        
+        if (!isset($kitchen_times[$k_id])) {
+            $kitchen_times[$k_id] = 0;
+        }
+        $kitchen_times[$k_id] += $tiempo_total_item;
+
+        // Descontamos stock_disponible
+        $pdo->prepare("UPDATE products SET stock_disponible = stock_disponible - ? WHERE id_product = ?")
+            ->execute([(int)$p['quantity'], $p['id_product']]);
+
+        // --- 🟢 NIVEL 2: DESCUENTO DE INGREDIENTES Y BOTELLAS ---
+        // (Mantenemos la lógica de ingredientes que ya teníamos...)
+        $stmtReceta = $pdo->prepare("SELECT pi.id_ingredient, pi.cant_us, i.tipo FROM product_ingredient pi JOIN ingredients i ON pi.id_ingredient = i.id_ingredients WHERE pi.id_product = ?");
+        $stmtReceta->execute([$p['id_product']]);
+        $receta = $stmtReceta->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($receta as $ing) {
+            $cantidadGasto = (float)$ing['cant_us'] * (int)$p['quantity'];
+            if ($cantidadGasto <= 0) continue;
+            $pdo->prepare("UPDATE ingredients SET stock_act = stock_act - ? WHERE id_ingredients = ?")->execute([$cantidadGasto, $ing['id_ingredient']]);
+            if ($ing['tipo'] === 'botella') {
+                $restante = $cantidadGasto;
+                while ($restante > 0) {
+                    $stmtB = $pdo->prepare("SELECT id_bottle, (peso_actual - peso_envase) as neto FROM ingredient_bottles WHERE ingredient_id = ? AND estado = 'abierta' AND (peso_actual - peso_envase) > 0 ORDER BY neto ASC LIMIT 1");
+                    $stmtB->execute([$ing['id_ingredient']]);
+                    $bot = $stmtB->fetch(PDO::FETCH_ASSOC);
+                    if (!$bot) break;
+                    $contenidoDisponible = (float)$bot['neto'];
+                    if ($contenidoDisponible > $restante) {
+                        $pdo->prepare("UPDATE ingredient_bottles SET peso_actual = peso_actual - ? WHERE id_bottle = ?")->execute([$restante, $bot['id_bottle']]);
+                        $restante = 0;
+                    } else {
+                        $pdo->prepare("UPDATE ingredient_bottles SET peso_actual = peso_envase, estado = 'finalizada' WHERE id_bottle = ?")->execute([$bot['id_bottle']]);
+                        $restante -= $contenidoDisponible;
+                    }
+                }
+            }
+        }
     }
-    $estimated_time = !empty($estaciones) ? max($estaciones) : 0;
 
-    // --- 3. CREAR CABECERA DEL PEDIDO (ORDERS) ---
-    $stmt = $pdo->prepare("
-        INSERT INTO orders 
-        (table_id, user_id, order_date, status, estimated_time, actual_time)
-        VALUES (?, ?, NOW(), 'open', ?, 0)
-    ");
-    $stmt->execute([$id_table, $id_user, $estimated_time]);
-    $id_order = $pdo->lastInsertId();
+    // --- ESTIMACIÓN FINAL DE LA ORDEN (TIEMPO EN PARALELO) ---
+    // La orden tarda lo que tarde la cocina más lenta
+    $max_estimated_time = !empty($kitchen_times) ? max($kitchen_times) : 0;
 
-    // --- 4. INSERTAR DETALLES Y DESCONTAR STOCK ---
+    // --- 🟢 NIVEL 3: CREACIÓN DE PEDIDO ---
+    $pdo->prepare("INSERT INTO orders (table_id, user_id, order_date, status, estimated_time) VALUES (?, ?, NOW(), 'open', ?)")
+        ->execute([$id_table, $id_user, $max_estimated_time]);
+    $order_id = $pdo->lastInsertId();
+
     $stmtDetail = $pdo->prepare("
-        INSERT INTO order_details
-        (order_id, product_id, kitchen_id, quantity, unit_price, total_price, preparation_time, status, notes, sides)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ");
-
-    $stmtUpdateStock = $pdo->prepare("
-        UPDATE products 
-        SET stock_disponible = stock_disponible - ? 
-        WHERE id_product = ?
+        INSERT INTO order_details (order_id, product_id, kitchen_id, quantity, unit_price, total_price, status, notes, sides)
+        VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)
     ");
 
     foreach ($products as $p) {
-        // Obtener la cocina del producto
         $stmtK = $pdo->prepare("SELECT kitchen_id FROM product_kitchen WHERE product_id = ? LIMIT 1");
         $stmtK->execute([$p['id_product']]);
-        $k_data = $stmtK->fetch(PDO::FETCH_ASSOC);
-        $kitchen_id = $k_data ? $k_data['kitchen_id'] : null;
-
-        $total_price = (float)$p['price'] * (int)$p['quantity'];
-
-        // Insertar detalle
+        $k_id = $stmtK->fetchColumn() ?: null;
+        
         $stmtDetail->execute([
-            $id_order,
-            $p['id_product'],
-            $kitchen_id,
-            $p['quantity'],
-            $p['price'],
-            $total_price,
-            0,
-            'pending',
-            $p['notes'] ?? null,
-            $p['sides'] ?? null
+            $order_id, $p['id_product'], $k_id, $p['quantity'], 
+            $p['price'], ($p['price'] * $p['quantity']), $p['notes'] ?? '', $p['sides'] ?? ''
         ]);
-
-        // 🔥 DESCUENTO DINÁMICO DE STOCK (Aquí es donde puede quedar en negativo)
-        $stmtUpdateStock->execute([$p['quantity'], $p['id_product']]);
     }
 
-    // --- 5. ACTUALIZAR ESTADO DE MESA ---
-    $stmtUpdateTable = $pdo->prepare("UPDATE cafe_tables SET estado = 'Pendiente' WHERE id_table = ?");
-    $stmtUpdateTable->execute([$id_table]);
-
+    $pdo->prepare("UPDATE cafe_tables SET estado = 'Pendiente' WHERE id_table = ?")->execute([$id_table]);
+    
     $pdo->commit();
-
-    echo json_encode([
-        "error" => 0, 
-        "id_order" => $id_order, 
-        "message" => "Pedido creado y stock descontado correctamente"
-    ]);
+    echo json_encode(["error" => 0, "message" => "Pedido creado.", "id_order" => $order_id, "estimated" => $max_estimated_time]);
 
 } catch (Exception $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
-    echo json_encode([
-        "error" => 1, 
-        "message" => "Error crítico: " . $e->getMessage()
-    ]);
+    echo json_encode(["error" => 1, "message" => $e->getMessage()]);
 }
-?>
