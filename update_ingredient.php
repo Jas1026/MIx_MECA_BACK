@@ -42,7 +42,8 @@ try {
                 tipo = :tipo,
                 peso_envase = :peso_envase,
                 peso_actual = :peso_actual,
-                capacidad_total = :capacidad_total
+                capacidad_total = :capacidad_total,
+location_id = :location_id
             WHERE id_ingredients = :id";
 
     $stmt = $pdo->prepare($sql);
@@ -55,7 +56,8 @@ try {
         ":tipo"            => $data["tipo"] ?? "normal",
         ":peso_envase"     => $data["peso_envase"] ?? null,
         ":peso_actual"     => $data["peso_actual"] ?? null,
-        ":capacidad_total" => $data["capacidad_total"] ?? null
+       ":capacidad_total" => $data["capacidad_total"] ?? null,
+":location_id"     => $data["location_id"] ?? null
     ]);
 
     echo json_encode(["success" => true, "message" => "Actualizado correctamente en " . $_POST['system']]);

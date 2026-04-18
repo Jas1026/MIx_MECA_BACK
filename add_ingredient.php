@@ -38,7 +38,7 @@ try {
         exit;
     }
     $sql = "INSERT INTO ingredients 
-            (nombre, stock_act, unidad_med, tipo, peso_envase, peso_actual, capacidad_total)
+(nombre, stock_act, unidad_med, tipo, peso_envase, peso_actual, capacidad_total, location_id) 
             VALUES 
             (:nombre, :stock, :unidad, :tipo, :peso_envase, :peso_actual, :capacidad_total)";
 
@@ -51,7 +51,8 @@ try {
         ":tipo"            => $data["tipo"] ?? "normal",
         ":peso_envase"     => $data["peso_envase"] ?? null,
         ":peso_actual"     => $data["peso_actual"] ?? null,
-        ":capacidad_total" => $data["capacidad_total"] ?? null
+       ":capacidad_total" => $data["capacidad_total"] ?? null,
+":location_id"     => $data["location_id"] ?? null
     ]);
 
     echo json_encode(["success" => true]);

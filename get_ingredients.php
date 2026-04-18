@@ -25,16 +25,15 @@ i.id_ingredients,
 i.nombre,
 i.unidad_med,
 i.tipo,
+i.location_id,  -- 👈 AGREGA ESTO
 
 CASE
  WHEN i.tipo='normal' THEN i.stock_act
-
  ELSE (
    SELECT COALESCE(SUM(peso_actual),0)
    FROM ingredient_bottles b
    WHERE b.ingredient_id=i.id_ingredients
  )
-
 END as stock_act
 
 FROM ingredients i
