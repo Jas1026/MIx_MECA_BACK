@@ -19,22 +19,25 @@ require_once 'dbconnect.php';
 $system = $_POST['system'] ?? '';
 
 try {
-
     $stmt = $pdo->prepare("
-        SELECT 
-            id_product,
-            nombre_producto,
-            alias,
-            price,
-            time_prep,
-            state,
-            id_category,
-            stock_congelado,   -- <--- Nueva Columna
-            stock_disponible,   -- <--- Nueva Columna
-            stock_minimo
-        FROM products
-        ORDER BY nombre_producto ASC
-    ");
+    SELECT 
+        p.id_product,
+        p.nombre_producto,
+        p.alias,
+        p.price,
+        p.time_prep,
+        p.state,
+        p.id_category,
+        p.id_subcategory,
+        sc.name AS subcategory_name,
+        p.stock_congelado,
+        p.stock_disponible,
+        p.stock_minimo
+    FROM products p
+    LEFT JOIN subcategories sc 
+        ON p.id_subcategory = sc.id_subcategory
+    ORDER BY p.nombre_producto ASC
+");
 
     $stmt->execute();
 

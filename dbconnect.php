@@ -23,7 +23,7 @@ if ($system === 'mixtura') {
     $dbname = 'mecapos';
 }
 
-$pdo = new PDO("mysql:host=localhost;port=3307;dbname=$dbname", 'root', '');
+$pdo = new PDO("mysql:host=localhost;port=3306;dbname=$dbname", 'root', '');
 $pdo->exec("set names utf8");
 $pdo->exec("SET SQL_BIG_SELECTS=1");
 ?>
