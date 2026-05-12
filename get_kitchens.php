@@ -17,7 +17,7 @@ include('dbconnect.php');
 try {
 
     // 👇 TABLA CORRECTA (plural)
-    $stmt = $pdo->prepare("SELECT id, name FROM kitchen");
+    $stmt = $pdo->prepare("SELECT id, name FROM kitchen WHERE active = 1");
     $stmt->execute();
 
     $data = $stmt->fetchAll(PDO::FETCH_ASSOC);

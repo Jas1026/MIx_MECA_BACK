@@ -29,7 +29,7 @@ if (!$data) {
 }
 
 try {
-    // Verificar si ya existe para evitar duplicados accidentales
+    // 1. Verificar duplicados
     $check = $pdo->prepare("SELECT id_ingredients FROM ingredients WHERE nombre = :nombre LIMIT 1");
     $check->execute([":nombre" => $data["nombre"]]);
     
@@ -37,13 +37,16 @@ try {
         echo json_encode(["success" => false, "error" => "El ingrediente ya existe"]);
         exit;
     }
+
+    // 2. Definir la consulta (Asegúrate que los tokens coincidan 1:1 con el array de abajo)
     $sql = "INSERT INTO ingredients 
-(nombre, stock_act, unidad_med, tipo, peso_envase, peso_actual, capacidad_total, location_id) 
+            (nombre, stock_act, unidad_med, tipo, peso_envase, peso_actual, capacidad_total, location_id) 
             VALUES 
-            (:nombre, :stock, :unidad, :tipo, :peso_envase, :peso_actual, :capacidad_total)";
+            (:nombre, :stock, :unidad, :tipo, :peso_envase, :peso_actual, :capacidad_total, :location_id)";
 
     $stmt = $pdo->prepare($sql);
     
+    // 3. Ejecutar con todos los parámetros mapeados
     $result = $stmt->execute([
         ":nombre"          => $data["nombre"] ?? null,
         ":stock"           => $data["stock_act"] ?? 0,
@@ -51,8 +54,8 @@ try {
         ":tipo"            => $data["tipo"] ?? "normal",
         ":peso_envase"     => $data["peso_envase"] ?? null,
         ":peso_actual"     => $data["peso_actual"] ?? null,
-       ":capacidad_total" => $data["capacidad_total"] ?? null,
-":location_id"     => $data["location_id"] ?? null
+        ":capacidad_total" => $data["capacidad_total"] ?? null,
+        ":location_id"     => $data["location_id"] ?? null // <-- Faltaba este en tu lista
     ]);
 
     echo json_encode(["success" => true]);
