@@ -1,17 +1,19 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-    <facturaElectronicaCompraVenta xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="facturaElectronicaCompraVenta.xsd">
-        <cabecera>
+    <facturaComputarizadaCompraVenta 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xsi:noNamespaceSchemaLocation="facturaComputarizadaCompraVenta.xsd">
+    <cabecera>
             <nitEmisor>4309065018</nitEmisor>
             <razonSocialEmisor>VALERIA ALEJANDRA SALINAS CAMACHO</razonSocialEmisor>
             <municipio>La Paz</municipio>
             <telefono>2222222</telefono>
-            <numeroFactura>447</numeroFactura>
-            <cuf>A767A9BA7B6DB7E1532DC764BFFB7B491D4E9178F286FEDEDA3550B0F3066885</cuf>
-            <cufd>VBQUE+QiV8ZUVBZFQkFFOTQ4OEU=Qz7DmjdRVk1GYVMzcxRjdGRjFGOE</cufd>
+            <numeroFactura>691</numeroFactura>
+            <cuf>126D693D10BC66320031C8FB34A406D2F7EF8BAC166FBQT5CJXxlRUE=ZFQkFFOTQ4OEU=Q3lbZTRWTUZhVUMzcxRjdGRjFGOE</cuf>
+            <cufd>FBQT5CJXxlRUE=ZFQkFFOTQ4OEU=Q3lbZTRWTUZhVUMzcxRjdGRjFGOE</cufd>
             <codigoSucursal>0</codigoSucursal>
             <direccion>Direccion del Establecimiento</direccion>
             <codigoPuntoVenta>0</codigoPuntoVenta>
-            <fechaEmision>2026-05-12T03:16:59.000</fechaEmision>
+            <fechaEmision>2026-05-11T21:55:30.000</fechaEmision>
             <nombreRazonSocial>CLIENTE PRUEBA</nombreRazonSocial>
             <codigoTipoDocumentoIdentidad>1</codigoTipoDocumentoIdentidad>
             <numeroDocumento>1234567</numeroDocumento>
@@ -28,13 +30,13 @@
             <descuentoAdicional>0</descuentoAdicional>
             <codigoExcepcion xsi:nil="true"/>
             <cafc xsi:nil="true"/>
-            <codigoLeyenda>1</codigoLeyenda>
+            <leyenda>1</leyenda>
             <usuario>SISTEMA</usuario>
             <codigoDocumentoSector>1</codigoDocumentoSector>
         </cabecera>
         <detalle>
-            <actividadEconomica>561000</actividadEconomica>
-            <codigoProductoSin>99100</codigoProductoSin>
+            <actividadEconomica>5610200</actividadEconomica>
+            <codigoProductoSin>61125</codigoProductoSin>
             <codigoProducto>Pizza</codigoProducto>
             <descripcion>Pizza</descripcion>
             <cantidad>2</cantidad>
@@ -44,4 +46,4 @@
             <subTotal>100</subTotal>
             <numeroSerie xsi:nil="true"/>
             <numeroImei xsi:nil="true"/>
-        </detalle></facturaElectronicaCompraVenta>
+        </detalle></facturaComputarizadaCompraVenta>

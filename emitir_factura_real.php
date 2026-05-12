@@ -80,12 +80,50 @@ try {
     if ($pdo->inTransaction()) $pdo->rollBack();
     echo json_encode(["error" => 1, "message" => $e->getMessage()]);
 }
+public function calcularCuf($numFactura, $fecha, $cufd) {
+    // 1. Campos con longitud fija
+    $nit = str_pad($this->config['nit'], 13, "0", STR_PAD_LEFT);
+    $fechaCuf = $fecha; // Debe ser YYYYMMDDHHMMSSmmm
+    $sucursal = str_pad($this->config['sucursal'], 4, "0", STR_PAD_LEFT);
+    $modalidad = $this->config['modalidad'];
+    $tipoEmision = 1; // Online
+    $tipoFactura = 1; // Compra Venta
+    $tipoSector = str_pad(1, 2, "0", STR_PAD_LEFT);
+    $numeroFactura = str_pad($numFactura, 10, "0", STR_PAD_LEFT);
+    $puntoVenta = str_pad($this->config['puntoVenta'], 4, "0", STR_PAD_LEFT);
 
-// --- FUNCIONES DE APOYO SIAT ---
-function calcularCUF($cadena) {
-    $digito = mod11($cadena);
-    return strtoupper(base_convert($cadena . $digito, 10, 16));
+    $cadena = $nit . $fechaCuf . $sucursal . $modalidad . $tipoEmision . $tipoFactura . $tipoSector . $numeroFactura . $puntoVenta;
+    
+    // 2. Calcular Módulo 11
+    $sum = 0;
+    $weight = 2;
+    for ($i = strlen($cadena) - 1; $i >= 0; $i--) {
+        $sum += $cadena[$i] * $weight;
+        $weight++;
+        if ($weight > 9) $weight = 2;
+    }
+    $mod = $sum % 11;
+    $digito = ($mod >= 10) ? 0 : $mod;
+    
+    // 3. Unir cadena + dígito y convertir a Base 16 (Hexadecimal)
+    $cufFinal = $cadena . $digito;
+    
+    // Convertir a Hexadecimal de forma manual para evitar problemas con números grandes
+    $hexCuf = "";
+    if (function_exists('bcadd')) { // Requiere extensión bcmath
+        $base16 = "";
+        $decimal = $cufFinal;
+        while ($decimal > 0) {
+            $last = bcmod($decimal, "16");
+            $base16 = dechex($last) . $base16;
+            $decimal = bcdiv($decimal, "16", 0);
+        }
+        $hexCuf = strtoupper($base16);
+    }
+
+    return $hexCuf . $cufd; // El CUF final es: HEX(datos + mod11) + CUFD
 }
+
 
 function mod11($num) {
     $sum = 0; $weight = 2;

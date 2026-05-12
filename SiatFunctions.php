@@ -1,5 +1,6 @@
 
 <?php
+date_default_timezone_set('America/La_Paz');
 require_once 'vendor/autoload.php';
 use RobRichards\XMLSecLibs\XMLSecurityDSig;
 use RobRichards\XMLSecLibs\XMLSecurityKey;
@@ -59,50 +60,46 @@ class SiatFunctions {
     return true;
 }
 
+public function generarXmlFactura($data, $cuf, $cufd, $fechaEnvio, $numFactura){
 
-public function generarXmlFactura($data, $cuf, $cufd) {
-    $fechaEnvio = date('Y-m-d\TH:i:s.000');
-    
-    // Estructura básica de Factura Computarizada en Línea
-    $xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-    <facturaElectronicaCompraVenta xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="facturaElectronicaCompraVenta.xsd">
-        <cabecera>
-            <nitEmisor>' . $this->config['nit'] . '</nitEmisor>
-            <razonSocialEmisor>VALERIA ALEJANDRA SALINAS CAMACHO</razonSocialEmisor>
-            <municipio>La Paz</municipio>
-            <telefono>2222222</telefono>
-            <numeroFactura>' . rand(1, 1000) . '</numeroFactura>
-            <cuf>' . $cuf . '</cuf>
-            <cufd>' . $cufd . '</cufd>
-            <codigoSucursal>' . $this->config['sucursal'] . '</codigoSucursal>
-            <direccion>Direccion del Establecimiento</direccion>
-            <codigoPuntoVenta>' . $this->config['puntoVenta'] . '</codigoPuntoVenta>
-            <fechaEmision>' . $fechaEnvio . '</fechaEmision>
-            <nombreRazonSocial>' . htmlspecialchars($data->razonSocial) . '</nombreRazonSocial>
-            <codigoTipoDocumentoIdentidad>1</codigoTipoDocumentoIdentidad>
-            <numeroDocumento>' . $data->nit . '</numeroDocumento>
-            <complemento xsi:nil="true"/>
-            <codigoCliente>' . $data->nit . '</codigoCliente>
-            <codigoMetodoPago>' . $data->metodoPago . '</codigoMetodoPago>
-            <numeroTarjeta xsi:nil="true"/>
-            <montoTotal>' . $data->montoTotal . '</montoTotal>
-            <montoTotalSujetoIva>' . $data->montoTotal . '</montoTotalSujetoIva>
-            <codigoMoneda>1</codigoMoneda>
-            <tipoCambio>1</tipoCambio>
-            <montoTotalMoneda>' . $data->montoTotal . '</montoTotalMoneda>
-            <montoGiftCard xsi:nil="true"/>
-            <descuentoAdicional>0</descuentoAdicional>
-            <codigoExcepcion xsi:nil="true"/>
-            <cafc xsi:nil="true"/>
-            <codigoLeyenda>1</codigoLeyenda>
-            <usuario>SISTEMA</usuario>
-            <codigoDocumentoSector>1</codigoDocumentoSector>
-        </cabecera>';
+    $xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?> 
+    <facturaComputarizadaCompraVenta xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="facturaComputarizadaCompraVenta.xsd"> 
+    <cabecera> 
+        <nitEmisor>' . $this->config['nit'] . '</nitEmisor> 
+        <razonSocialEmisor>VALERIA ALEJANDRA SALINAS CAMACHO</razonSocialEmisor> 
+        <municipio>La Paz</municipio> 
+        <telefono>2222222</telefono> 
+        <numeroFactura>' . $numFactura . '</numeroFactura> 
+        <cuf>' . $cuf . '</cuf> 
+        <cufd>' . $cufd . '</cufd> 
+        <codigoSucursal>' . $this->config['sucursal'] . '</codigoSucursal> 
+        <direccion>Direccion del Establecimiento</direccion> 
+        <codigoPuntoVenta>' . $this->config['puntoVenta'] . '</codigoPuntoVenta> 
+        <fechaEmision>' . $fechaEnvio . '</fechaEmision> 
+        <nombreRazonSocial>' . htmlspecialchars($data->razonSocial) . '</nombreRazonSocial>
+        <codigoTipoDocumentoIdentidad>1</codigoTipoDocumentoIdentidad>
+        <numeroDocumento>' . $data->nit . '</numeroDocumento>
+        <complemento xsi:nil="true"/>
+        <codigoCliente>' . $data->nit . '</codigoCliente>
+        <codigoMetodoPago>' . $data->metodoPago . '</codigoMetodoPago>
+        <numeroTarjeta xsi:nil="true"/>
+        <montoTotal>' . $data->montoTotal . '</montoTotal>
+        <montoTotalSujetoIva>' . $data->montoTotal . '</montoTotalSujetoIva>
+        <codigoMoneda>1</codigoMoneda>
+        <tipoCambio>1</tipoCambio>
+        <montoTotalMoneda>' . $data->montoTotal . '</montoTotalMoneda>
+        <montoGiftCard xsi:nil="true"/>
+        <descuentoAdicional>0</descuentoAdicional>
+        <codigoExcepcion xsi:nil="true"/>
+        <cafc xsi:nil="true"/>
+        <leyenda>1</leyenda>
+        <usuario>SISTEMA</usuario>
+        <codigoDocumentoSector>1</codigoDocumentoSector>
+    </cabecera>';
 
     foreach ($data->detalles as $item) {
-        $xml .= '
-        <detalle>
-            <actividadEconomica>561000</actividadEconomica>
+        $xml .= '<detalle>
+            <actividadEconomica>560000</actividadEconomica>
             <codigoProductoSin>99100</codigoProductoSin>
             <codigoProducto>' . $item->descripcion . '</codigoProducto>
             <descripcion>' . $item->descripcion . '</descripcion>
@@ -115,21 +112,16 @@ public function generarXmlFactura($data, $cuf, $cufd) {
             <numeroImei xsi:nil="true"/>
         </detalle>';
     }
-
-    $xml .= '</facturaElectronicaCompraVenta>';
+    $xml .= '</facturaComputarizadaCompraVenta>';
     return $xml;
 }
-// Dentro de la clase SiatFunctions en SiatFunctions.php
-public function enviarFactura($xmlFirmado, $cufd) {
-
-    // Comprimir XML
-    $gzData = gzencode($xmlFirmado, 9);
-
-    // HASH DEL XML ORIGINAL
-    $archivoHash = hash("sha256", $xmlFirmado);
+// Cambia la definición de la función
+public function enviarFactura($xml, $cufd, $fechaEnvio) { 
+    $gzData = gzencode($xml, 9);
+    $archivoSoap = new SoapVar($gzData, XSD_BASE64BINARY);
+    $archivoHash = hash("sha256", $gzData);
 
     $wsdl = "https://pilotosiatservicios.impuestos.gob.bo/v2/ServicioFacturacionCompraVenta?wsdl";
-
     $client = new SoapClient($wsdl, [
         'stream_context' => $this->getContext(),
         'cache_wsdl' => WSDL_CACHE_NONE,
@@ -140,7 +132,6 @@ public function enviarFactura($xmlFirmado, $cufd) {
 
     $params = [
         'SolicitudServicioRecepcionFactura' => [
-
             'codigoAmbiente' => $this->config['ambiente'],
             'codigoDocumentoSector' => 1,
             'codigoEmision' => 1,
@@ -148,33 +139,57 @@ public function enviarFactura($xmlFirmado, $cufd) {
             'codigoPuntoVenta' => $this->config['puntoVenta'],
             'codigoSistema' => $this->config['codigoSistema'],
             'codigoSucursal' => $this->config['sucursal'],
-
             'cufd' => $cufd,
-
             'cuis' => $this->config['cuis'],
             'nit' => $this->config['nit'],
-
             'tipoFacturaDocumento' => 1,
-
-            'archivo' => $gzData,
-
-            'fechaEnvio' => date('Y-m-d\TH:i:s.000'),
-
+            'archivo' => $archivoSoap,
+            'fechaEnvio' => $fechaEnvio, // <--- USA LA FECHA PASADA POR PARÁMETRO
             'hashArchivo' => $archivoHash
         ]
     ];
-
     return $client->recepcionFactura($params);
 }
+public function calcularCuf($numFactura, $fecha, $codigoControl){
+    // Aseguramos que el NIT sea solo el número, sin el token
+    $nitNum = preg_replace('/[^0-9]/', '', (string)$this->config['nit']);
+    $nit = str_pad($nitNum, 13, "0", STR_PAD_LEFT);
+    
+    $sucursal = str_pad($this->config['sucursal'], 4, "0", STR_PAD_LEFT);
+    $modalidad = $this->config['modalidad'];
+    $tipoEmision = 1;
+    $tipoFactura = 1;
+    $tipoSector = str_pad(1, 2, "0", STR_PAD_LEFT);
+    $numeroFactura = str_pad($numFactura, 10, "0", STR_PAD_LEFT);
+    $puntoVenta = str_pad($this->config['puntoVenta'], 4, "0", STR_PAD_LEFT);
 
-// Función para calcular el CUF (Código Único de Factura) simplificado para pruebas
-public function calcularCuf($numFactura, $fecha, $cufd) {
-    // El algoritmo real es una cadena larga + Modulo 11. 
-    // Para probar comunicación, enviaremos una cadena construida:
-    $cadena = $this->config['nit'] . $fecha . $this->config['sucursal'] . $this->config['modalidad'] . "1" . "1" . "1" . $numFactura . "0";
-    // Nota: El CUF real debe generarse con el algoritmo oficial.
-    return strtoupper(hash('sha256', $cadena . $cufd)); 
+    $cadena = $nit . $fecha . $sucursal . $modalidad . $tipoEmision . $tipoFactura . $tipoSector . $numeroFactura . $puntoVenta;
+
+    // Modulo 11
+    $sum = 0; $weight = 2;
+    for ($i = strlen($cadena) - 1; $i >= 0; $i--) {
+        $sum += intval($cadena[$i]) * $weight;
+        $weight++;
+        if ($weight > 9) $weight = 2;
+    }
+    $mod = $sum % 11;
+    $digito = ($mod >= 10) ? 0 : $mod;
+    $cufFinal = $cadena . $digito;
+
+    // Conversión Base 16
+    $hexCuf = "";
+    $decimal = $cufFinal;
+    while (bccomp($decimal, "0") > 0) {
+        $last = bcmod($decimal, "16");
+        $hexCuf = dechex($last) . $hexCuf;
+        $decimal = bcdiv($decimal, "16", 0);
+    }
+
+    // Retornamos el HEX y el CUFD (limpio de cualquier espacio o token)
+return strtoupper($hexCuf . $codigoControl);
 }
+
+
 public function firmarXml($xmlString) {
 
     $doc = new DOMDocument();
