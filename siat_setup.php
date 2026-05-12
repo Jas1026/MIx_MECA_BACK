@@ -64,6 +64,9 @@ $context = stream_context_create([
                 $resCufd = $client->cufd($paramsCufd);
                 $cufd = $resCufd->RespuestaCufd->codigo;
 
+
+
+                
                 $fechaVig = str_replace(
                     'T',
                     ' ',

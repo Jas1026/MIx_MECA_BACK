@@ -1,0 +1,13 @@
+{
+    "name": "usuario/api",
+    "authors": [
+        {
+            "name": "Jas1026",
+            "email": "jasmincabreraaspiazu@gmail.com"
+        }
+    ],
+    "require": {
+        "robrichards/xmlseclibs": "dev-master"
+    },
+    "minimum-stability": "dev"
+}
