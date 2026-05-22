@@ -1,7 +1,12 @@
 <?php
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: Content-Type");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Content-Type: application/json");
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    exit(0);
+}
 
 include("dbconnect.php");
 
@@ -12,14 +17,24 @@ try {
 
     $pdo->exec("USE `$system`");
 
-    $stmt = $pdo->prepare("
-        SELECT 
-            id_product,
-            nombre_producto,
-            stock_disponible
-        FROM products
-        WHERE location_id = ?
-    ");
+$stmt = $pdo->prepare("
+    SELECT 
+        pl.id,
+        p.id_product,
+        p.nombre_producto,
+        pl.stock_disponible,
+        pl.stock_congelado,
+        pl.stock_minimo
+
+    FROM product_location pl
+
+    INNER JOIN products p 
+        ON p.id_product = pl.product_id
+
+    WHERE pl.location_id = ?
+
+    ORDER BY pl.orden ASC
+");
 
     $stmt->execute([$location_id]);
 
@@ -29,5 +44,10 @@ try {
     ]);
 
 } catch(Exception $e){
-    echo json_encode(["error"=>1,"message"=>$e->getMessage()]);
+
+    echo json_encode([
+        "error"=>1,
+        "message"=>$e->getMessage()
+    ]);
 }
+?>

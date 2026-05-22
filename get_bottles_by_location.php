@@ -12,16 +12,24 @@ try {
 
     $pdo->exec("USE `$system`");
 
-    $stmt = $pdo->prepare("
-        SELECT 
-            b.ingredient_id,
-            i.nombre,
-            COUNT(*) as cantidad
-        FROM ingredient_bottles b
-        JOIN ingredients i ON i.id_ingredients = b.ingredient_id
-        WHERE b.location_id = ?
-        GROUP BY b.ingredient_id
-    ");
+$stmt = $pdo->prepare("
+    SELECT 
+        b.ingredient_id,
+        i.nombre,
+        i.orden,
+        COUNT(*) as cantidad
+
+    FROM ingredient_bottles b
+
+    JOIN ingredients i 
+        ON i.id_ingredients = b.ingredient_id
+
+    WHERE b.location_id = ?
+
+    GROUP BY b.ingredient_id
+
+    ORDER BY i.orden ASC
+");
 
     $stmt->execute([$location_id]);
 
