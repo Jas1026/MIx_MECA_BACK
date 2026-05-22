@@ -35,12 +35,35 @@ try {
             p.nombre_empresa AS nombre_proveedor,
 
             CASE
-                WHEN i.tipo='normal' THEN i.stock_act
-                ELSE (
-                    SELECT COALESCE(SUM(b.peso_actual),0)
+
+                -- STOCK NORMAL
+                WHEN i.tipo = 'normal'
+                THEN i.stock_act
+
+                -- STOCK BOTELLAS
+                WHEN i.tipo = 'botella'
+                THEN (
+                    SELECT COALESCE(SUM(
+                        (b.peso_actual - b.peso_envase)
+                    ),0)
                     FROM ingredient_bottles b
                     WHERE b.ingredient_id = i.id_ingredients
+                    AND b.estado != 'finalizada'
                 )
+
+                -- STOCK FRACCIONADO
+                WHEN i.tipo = 'fraccionado'
+                THEN (
+                    SELECT COALESCE(SUM(
+                        f.cantidad_actual
+                    ),0)
+                    FROM ingredient_fractions f
+                    WHERE f.ingredient_id = i.id_ingredients
+                    AND f.estado != 'agotado'
+                )
+
+                ELSE 0
+
             END as stock_act
 
         FROM ingredients i
