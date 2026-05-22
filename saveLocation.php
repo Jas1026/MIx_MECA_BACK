@@ -16,7 +16,9 @@ header("Content-Type: application/json");
 include("dbconnect.php");
 
 $data = json_decode(file_get_contents("php://input"), true);
+$target_db = $data['system'] ?? 'mecapos';
 
+$pdo->exec("USE `$target_db`");
 $id = $data['id_location'] ?? null;
 $nombre = $data['nombre'] ?? '';
 $tipo = $data['tipo'] ?? '';

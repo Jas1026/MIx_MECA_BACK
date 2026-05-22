@@ -37,7 +37,7 @@ try {
             pr.stock_disponible,
             pr.stock_minimo,
             pr.proveedor_id,
-
+            tipo_producto,
             sc.name AS subcategory_name,
 
             pv.nombre_empresa AS nombre_proveedor

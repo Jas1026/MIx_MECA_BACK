@@ -211,6 +211,76 @@ try {
                     }
                 }
             }
+            // =========================
+// FRACCIONADOS
+// =========================
+if ($ing['tipo'] === 'fraccionado') {
+
+    $restante = $cantidadGasto;
+
+    while ($restante > 0) {
+
+        $stmtF = $pdo->prepare("
+            SELECT
+                id_fraction,
+                cantidad_actual
+            FROM ingredient_fractions
+            WHERE ingredient_id = ?
+            AND estado = 'abierto'
+            AND cantidad_actual > 0
+           ORDER BY created_at ASC
+            LIMIT 1
+        ");
+
+        $stmtF->execute([
+            $ing['id_ingredient']
+        ]);
+
+        $fraction = $stmtF->fetch(PDO::FETCH_ASSOC);
+
+        // No hay más fracciones disponibles
+        if (!$fraction) {
+            break;
+        }
+
+        $disponible =
+            (float)$fraction['cantidad_actual'];
+
+        // La fracción alcanza
+        if ($disponible > $restante) {
+
+            $stmtUpdateFraction = $pdo->prepare("
+                UPDATE ingredient_fractions
+                SET cantidad_actual = cantidad_actual - ?
+                WHERE id_fraction = ?
+            ");
+
+            $stmtUpdateFraction->execute([
+                $restante,
+                $fraction['id_fraction']
+            ]);
+
+            $restante = 0;
+
+        } else {
+
+            // Consumir toda la fracción
+            $stmtFinishFraction = $pdo->prepare("
+                UPDATE ingredient_fractions
+                SET
+                    cantidad_actual = 0,
+                    estado = 'finalizado'
+                WHERE id_fraction = ?
+            ");
+
+            $stmtFinishFraction->execute([
+                $fraction['id_fraction']
+            ]);
+
+            $restante -= $disponible;
+        }
+    }
+}
         }
     }
 
