@@ -39,25 +39,24 @@ try {
     }
 
     // 2. Definir la consulta (Asegúrate que los tokens coincidan 1:1 con el array de abajo)
-    $sql = "INSERT INTO ingredients 
-            (nombre, stock_act, unidad_med, tipo, peso_envase, peso_actual, capacidad_total, location_id) 
-            VALUES 
-            (:nombre, :stock, :unidad, :tipo, :peso_envase, :peso_actual, :capacidad_total, :location_id)";
-
+$sql = "INSERT INTO ingredients 
+(nombre, stock_act, unidad_med, tipo, peso_envase, peso_actual, capacidad_total, location_id, proveedor_id)
+VALUES 
+(:nombre, :stock, :unidad, :tipo, :peso_envase, :peso_actual, :capacidad_total, :location_id, :proveedor_id)";
     $stmt = $pdo->prepare($sql);
     
     // 3. Ejecutar con todos los parámetros mapeados
-    $result = $stmt->execute([
-        ":nombre"          => $data["nombre"] ?? null,
-        ":stock"           => $data["stock_act"] ?? 0,
-        ":unidad"          => $data["unidad_med"] ?? null,
-        ":tipo"            => $data["tipo"] ?? "normal",
-        ":peso_envase"     => $data["peso_envase"] ?? null,
-        ":peso_actual"     => $data["peso_actual"] ?? null,
-        ":capacidad_total" => $data["capacidad_total"] ?? null,
-        ":location_id"     => $data["location_id"] ?? null // <-- Faltaba este en tu lista
-    ]);
-
+$result = $stmt->execute([
+    ":nombre"          => $data["nombre"] ?? null,
+    ":stock"           => $data["stock_act"] ?? 0,
+    ":unidad"          => $data["unidad_med"] ?? null,
+    ":tipo"            => $data["tipo"] ?? "normal",
+    ":peso_envase"     => $data["peso_envase"] ?? null,
+    ":peso_actual"     => $data["peso_actual"] ?? null,
+    ":capacidad_total" => $data["capacidad_total"] ?? null,
+    ":location_id"     => $data["location_id"] ?? null,
+    ":proveedor_id"    => $data["provider_id"] ?? null
+]);
     echo json_encode(["success" => true]);
 
 } catch (PDOException $e) {

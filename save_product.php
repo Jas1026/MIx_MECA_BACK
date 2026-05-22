@@ -48,31 +48,32 @@ try {
     // 1. PRODUCTO
     // =========================================
     if ($id_product && $id_product > 0) {
-
-        $sql = "UPDATE products SET 
-                    nombre_producto = ?, 
-                    alias = ?, 
-                    price = ?, 
-                    id_category = ?, 
-                    id_subcategory = ?, 
-                    time_prep = ?, 
-                    stock_congelado = ?, 
-                    stock_disponible = ?,
-                    stock_minimo = ?
-                WHERE id_product = ?";
+$sql = "UPDATE products SET 
+            nombre_producto = ?, 
+            alias = ?, 
+            price = ?, 
+            id_category = ?, 
+            id_subcategory = ?, 
+            time_prep = ?, 
+            stock_congelado = ?, 
+            stock_disponible = ?,
+            stock_minimo = ?,
+            proveedor_id = ?
+        WHERE id_product = ?";
         
-        $pdo->prepare($sql)->execute([
-            $p['nombre_producto'], 
-            $p['alias'] ?? '', 
-            $p['price'], 
-            $p['id_category'], 
-            $p['id_subcategory'],
-            $p['time_prep'] ?? 0,
-            $p['stock_congelado'],
-            $p['stock_disponible'],
-            $p['stock_minimo'],
-            $id_product
-        ]);
+       $pdo->prepare($sql)->execute([
+    $p['nombre_producto'], 
+    $p['alias'] ?? '', 
+    $p['price'], 
+    $p['id_category'], 
+    $p['id_subcategory'],
+    $p['time_prep'] ?? 0,
+    $p['stock_congelado'],
+    $p['stock_disponible'],
+    $p['stock_minimo'],
+    $p['proveedor_id'] ?? null, 
+    $id_product
+]);
 
         // limpiar relaciones
         $pdo->prepare("DELETE FROM product_ingredient WHERE id_product = ?")->execute([$id_product]);
@@ -82,30 +83,33 @@ try {
     } else {
 
         $sql = "INSERT INTO products (
-                    nombre_producto, 
-                    alias, 
-                    price, 
-                    id_category,
-                    id_subcategory, 
-                    time_prep, 
-                    stock_congelado, 
-                    stock_disponible, 
-                    stock_minimo,
-                    state
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')";
-        
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([
-            $p['nombre_producto'], 
-            $p['alias'] ?? '', 
-            $p['price'], 
-            $p['id_category'], 
-            $p['id_subcategory'],
-            $p['time_prep'] ?? 0,
-            $p['stock_congelado'],
-            $p['stock_disponible'],
-            $p['stock_minimo']
-        ]);
+            nombre_producto, 
+            alias, 
+            price, 
+            id_category,
+            id_subcategory, 
+            time_prep, 
+            stock_congelado, 
+            stock_disponible, 
+            stock_minimo,
+            proveedor_id,
+            state
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+       $stmt = $pdo->prepare($sql);
+
+$stmt->execute([
+    $p['nombre_producto'], 
+    $p['alias'] ?? '', 
+    $p['price'], 
+    $p['id_category'], 
+    $p['id_subcategory'],
+    $p['time_prep'] ?? 0,
+    $p['stock_congelado'],
+    $p['stock_disponible'],
+    $p['stock_minimo'],
+    $p['proveedor_id'] ?? null,
+    'active'
+]);
 
         $id_product = $pdo->lastInsertId();
     }

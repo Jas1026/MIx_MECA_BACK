@@ -14,31 +14,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once 'dbconnect.php';
 
-// Recibir system si lo necesitas
 $system = $_POST['system'] ?? '';
 
 try {
 
-$stmt = $pdo->prepare("
-SELECT
-i.id_ingredients,
-i.nombre,
-i.unidad_med,
-i.tipo,
-i.location_id,  -- 👈 AGREGA ESTO
+    if (!empty($system)) {
+        $pdo->exec("USE `$system`");
+    }
 
-CASE
- WHEN i.tipo='normal' THEN i.stock_act
- ELSE (
-   SELECT COALESCE(SUM(peso_actual),0)
-   FROM ingredient_bottles b
-   WHERE b.ingredient_id=i.id_ingredients
- )
-END as stock_act
+    $stmt = $pdo->prepare("
 
-FROM ingredients i
-");
+        SELECT
+            i.id_ingredients,
+            i.nombre,
+            i.unidad_med,
+            i.tipo,
+            i.location_id,
+            i.proveedor_id,
 
+            p.nombre_empresa AS nombre_proveedor,
+
+            CASE
+                WHEN i.tipo='normal' THEN i.stock_act
+                ELSE (
+                    SELECT COALESCE(SUM(b.peso_actual),0)
+                    FROM ingredient_bottles b
+                    WHERE b.ingredient_id = i.id_ingredients
+                )
+            END as stock_act
+
+        FROM ingredients i
+
+        LEFT JOIN proveedor p
+            ON p.id_proveedor = i.proveedor_id
+
+        ORDER BY i.nombre ASC
+
+    ");
 
     $stmt->execute();
 
@@ -56,3 +68,4 @@ FROM ingredients i
         "message" => $e->getMessage()
     ]);
 }
+?>

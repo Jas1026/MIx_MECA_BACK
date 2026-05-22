@@ -14,30 +14,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once 'dbconnect.php';
 
-// Nota: Asegúrate de que tu dbconnect.php use la variable $system 
-// si manejas múltiples bases de datos, de lo contrario usará la por defecto.
 $system = $_POST['system'] ?? '';
 
 try {
+
+    if (!empty($system)) {
+        $pdo->exec("USE `$system`");
+    }
+
     $stmt = $pdo->prepare("
-    SELECT 
-        p.id_product,
-        p.nombre_producto,
-        p.alias,
-        p.price,
-        p.time_prep,
-        p.state,
-        p.id_category,
-        p.id_subcategory,
-        sc.name AS subcategory_name,
-        p.stock_congelado,
-        p.stock_disponible,
-        p.stock_minimo
-    FROM products p
-    LEFT JOIN subcategories sc 
-        ON p.id_subcategory = sc.id_subcategory
-    ORDER BY p.nombre_producto ASC
-");
+
+        SELECT 
+            pr.id_product,
+            pr.nombre_producto,
+            pr.alias,
+            pr.price,
+            pr.time_prep,
+            pr.state,
+            pr.id_category,
+            pr.id_subcategory,
+            pr.stock_congelado,
+            pr.stock_disponible,
+            pr.stock_minimo,
+            pr.proveedor_id,
+
+            sc.name AS subcategory_name,
+
+            pv.nombre_empresa AS nombre_proveedor
+
+        FROM products pr
+
+        LEFT JOIN subcategories sc
+            ON pr.id_subcategory = sc.id_subcategory
+
+        LEFT JOIN proveedor pv
+            ON pv.id_proveedor = pr.proveedor_id
+
+        ORDER BY pr.nombre_producto ASC
+
+    ");
 
     $stmt->execute();
 
