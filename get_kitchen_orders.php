@@ -17,6 +17,7 @@ try {
             od.product_id,
             od.quantity,
             od.status,
+            od.process_status,
             od.alert_status,
             od.notes,
             od.sides,
@@ -29,8 +30,9 @@ try {
         INNER JOIN orders o ON o.order_id = od.order_id
         INNER JOIN products p ON p.id_product = od.product_id
         INNER JOIN product_kitchen pk ON pk.product_id = p.id_product
-        WHERE pk.kitchen_id = ? 
-        AND od.status = 'pending'
+        WHERE pk.kitchen_id=?
+AND od.status='pending'
+AND od.process_status!='picked_up'
         AND o.status NOT IN ('paid','closed')
         ORDER BY o.order_date ASC
     ");

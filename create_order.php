@@ -314,7 +314,26 @@ if ($ing['tipo'] === 'fraccionado') {
     ]);
 
     $order_id = $pdo->lastInsertId();
+$stmtHist = $pdo->prepare("
+INSERT INTO historial_mesa
+(
+ order_id,
+ user_id,
+ accion,
+ observacion
+)
+VALUES
+(
+ ?,?,
+ 'abrir',
+ 'Mesa abierta'
+)
+");
 
+$stmtHist->execute([
+   $order_id,
+   $id_user
+]);
     // =========================
     // DETALLE ORDEN
     // =========================
@@ -329,10 +348,11 @@ if ($ing['tipo'] === 'fraccionado') {
             quantity,
             unit_price,
             status,
+            process_status,
             notes,
             sides
         )
-        VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)
+        VALUES (?, ?, ?, ?, ?, 'pending','new', ?, ?)
     ");
 
     foreach ($products as $p) {

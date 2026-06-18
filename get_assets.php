@@ -19,9 +19,13 @@ try {
     $pdo->exec("USE `$system` ");
 
     $stmt = $pdo->prepare("
-        SELECT *
-        FROM assets
-        ORDER BY nombre ASC
+SELECT *
+
+FROM assets
+
+WHERE LOWER(estado) != 'eliminado'
+
+ORDER BY nombre ASC
     ");
 
     $stmt->execute();

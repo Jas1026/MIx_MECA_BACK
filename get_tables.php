@@ -23,8 +23,6 @@ if (empty($id_flat)) {
 
 try {
 
-  // Cambia tu consulta en get_tables.php por esta:
-// Cambia tu consulta por esta:
 $stmt = $pdo->prepare("
     SELECT 
         t.id_table,
@@ -33,16 +31,29 @@ $stmt = $pdo->prepare("
         t.estado,
         o.order_id,
         o.status,
-        o.order_date,      -- IMPORTANTE: Sin esto no hay reloj
-        o.estimated_time   -- IMPORTANTE: Sin esto no hay comparación de tiempo
+        o.order_date,
+        o.estimated_time
+
     FROM cafe_tables t
+
     LEFT JOIN orders o 
         ON t.id_table = o.table_id
         AND o.status IN ('open', 'ready')
+
     WHERE t.id_flats = ?
-    -- Usamos una subconsulta o aseguramos que traiga el último pedido abierto
-    AND (o.order_id = (SELECT MAX(order_id) FROM orders WHERE table_id = t.id_table AND status IN ('open','ready')) OR o.order_id IS NULL)
-    GROUP BY t.id_table 
+    AND t.estado <> 'Eliminada'
+
+    AND (
+        o.order_id = (
+            SELECT MAX(order_id)
+            FROM orders
+            WHERE table_id = t.id_table
+            AND status IN ('open','ready')
+        )
+        OR o.order_id IS NULL
+    )
+
+    GROUP BY t.id_table
 ");
 
     $stmt->execute([$id_flat]);

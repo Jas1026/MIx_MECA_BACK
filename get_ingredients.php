@@ -66,12 +66,14 @@ try {
 
             END as stock_act
 
-        FROM ingredients i
+FROM ingredients i
 
-        LEFT JOIN proveedor p
-            ON p.id_proveedor = i.proveedor_id
+LEFT JOIN proveedor p
+ON p.id_proveedor = i.proveedor_id
 
-        ORDER BY i.nombre ASC
+WHERE i.estado != 'eliminado'
+
+ORDER BY i.nombre ASC
 
     ");
 

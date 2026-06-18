@@ -23,7 +23,6 @@ try {
     }
 
     $stmt = $pdo->prepare("
-
         SELECT 
             pr.id_product,
             pr.nombre_producto,
@@ -37,25 +36,35 @@ try {
             pr.stock_disponible,
             pr.stock_minimo,
             pr.proveedor_id,
-            tipo_producto,
+            pr.tipo_producto,
             sc.name AS subcategory_name,
-
-            pv.nombre_empresa AS nombre_proveedor
+            pv.nombre_empresa AS nombre_proveedor,
+            
+            -- Nuevos campos agregados para la cocina
+            pk.kitchen_id,
+            COALESCE(k.name, 'Sin asignar') AS nombre_cocina
 
         FROM products pr
-
+ 
         LEFT JOIN subcategories sc
             ON pr.id_subcategory = sc.id_subcategory
 
         LEFT JOIN proveedor pv
             ON pv.id_proveedor = pr.proveedor_id
 
-        ORDER BY pr.nombre_producto ASC
+        -- Relación con la tabla intermedia
+        LEFT JOIN product_kitchen pk
+            ON pr.id_product = pk.product_id
 
+        -- Relación con la tabla maestra de cocinas (Ajusta 'id_kitchen' o 'nombre_cocina' si sus columnas se llaman diferente)
+        LEFT JOIN kitchen k
+            ON pk.kitchen_id = k.id
+
+        WHERE pr.state IN ('active','inactive')
+        ORDER BY pr.nombre_producto ASC
     ");
 
     $stmt->execute();
-
     $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     echo json_encode([
@@ -64,7 +73,6 @@ try {
     ]);
 
 } catch (PDOException $e) {
-
     echo json_encode([
         "error" => 1,
         "message" => $e->getMessage()

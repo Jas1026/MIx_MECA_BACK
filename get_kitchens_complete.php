@@ -7,7 +7,12 @@ include "dbconnect.php";
 $system = $_GET['system'] ?? 'mecapos';
 try {
     $pdo->exec("USE `$system` "); 
-    $stmt = $pdo->query("SELECT * FROM kitchen ORDER BY id DESC");
+$stmt = $pdo->query("
+SELECT *
+FROM kitchen
+WHERE active IN (0,1)
+ORDER BY id DESC
+");
     $flats = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     echo json_encode($flats);
