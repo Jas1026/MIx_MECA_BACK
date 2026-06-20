@@ -354,32 +354,38 @@ $stmtHist->execute([
         )
         VALUES (?, ?, ?, ?, ?, 'pending','new', ?, ?)
     ");
+foreach ($products as $p) {
 
-    foreach ($products as $p) {
+    $stmtK = $pdo->prepare("
+        SELECT kitchen_id
+        FROM product_kitchen
+        WHERE product_id = ?
+        LIMIT 1
+    ");
 
-        $stmtK = $pdo->prepare("
-            SELECT kitchen_id
-            FROM product_kitchen
-            WHERE product_id = ?
-            LIMIT 1
-        ");
+    $stmtK->execute([
+        $p['id_product']
+    ]);
 
-        $stmtK->execute([
-            $p['id_product']
-        ]);
+    $k_id = $stmtK->fetchColumn() ?: null;
 
-        $k_id = $stmtK->fetchColumn() ?: null;
+    $cantidad = (int)$p['quantity'];
+
+    for($i=0; $i<$cantidad; $i++){
 
         $stmtDetail->execute([
             $order_id,
             $p['id_product'],
             $k_id,
-            $p['quantity'],
+            1, // <-- SIEMPRE 1
             $p['price'],
             $p['notes'] ?? '',
             $p['sides'] ?? ''
         ]);
+
     }
+
+}
 
     // =========================
     // ACTUALIZAR MESA
