@@ -28,6 +28,7 @@ try {
             i.id_ingredients,
             i.nombre,
             i.unidad_med,
+            i.created_at,
             i.tipo,
             i.location_id,
             i.proveedor_id,

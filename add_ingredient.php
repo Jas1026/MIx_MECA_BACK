@@ -22,17 +22,14 @@ header("Content-Type: application/json");
 include "dbconnect.php";
 
 if (!$data) {
-
     echo json_encode([
         "success" => false,
         "error" => "No data received"
     ]);
-
     exit;
 }
 
 try {
-
     $check = $pdo->prepare("
         SELECT id_ingredients
         FROM ingredients
@@ -45,12 +42,10 @@ try {
     ]);
 
     if ($check->fetch()) {
-
         echo json_encode([
             "success" => false,
             "error" => "El ingrediente ya existe"
         ]);
-
         exit;
     }
 
@@ -66,6 +61,7 @@ try {
         ? 'g'
         : ($data["unidad_med"] ?? '');
 
+    // Añadimos "created_at" y pasamos "NOW()" en el INSERT
     $sql = "
         INSERT INTO ingredients
         (
@@ -77,7 +73,8 @@ try {
             peso_actual,
             capacidad_total,
             location_id,
-            proveedor_id
+            proveedor_id,
+            created_at
         )
         VALUES
         (
@@ -89,32 +86,23 @@ try {
             :peso_actual,
             :capacidad_total,
             :location_id,
-            :proveedor_id
+            :proveedor_id,
+            NOW()
         )
     ";
 
     $stmt = $pdo->prepare($sql);
 
     $stmt->execute([
-
         ":nombre"          => $data["nombre"] ?? null,
-
         ":stock"           => $stock,
-
         ":unidad"          => $unidad,
-
         ":tipo"            => $tipo,
-
         ":peso_envase"     => $data["peso_envase"] ?? null,
-
         ":peso_actual"     => $data["peso_actual"] ?? null,
-
         ":capacidad_total" => $data["capacidad_total"] ?? null,
-
         ":location_id"     => $data["location_id"] ?? null,
-
         ":proveedor_id"    => $data["provider_id"] ?? null
-
     ]);
 
     echo json_encode([
@@ -122,13 +110,10 @@ try {
     ]);
 
 } catch (PDOException $e) {
-
     http_response_code(500);
-
     echo json_encode([
         "success" => false,
         "error" => $e->getMessage()
     ]);
-
 }
 ?>

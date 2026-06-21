@@ -30,6 +30,7 @@ try {
             pr.price,
             pr.time_prep,
             pr.state,
+            pr.created_at,
             pr.id_category,
             pr.id_subcategory,
             pr.stock_congelado,

@@ -39,8 +39,6 @@ try {
         throw new Exception("El nombre del producto es obligatorio");
     }
 
-    // alias no puede ser null si tu BD lo tiene NOT NULL
-    // para final puede quedar vacío
     $alias = trim($p['alias'] ?? '');
     if ($alias === null) {
         $alias = '';
@@ -130,7 +128,7 @@ try {
             ->execute([$id_product]);
 
     } else {
-
+        // AQUÍ ES CREACIÓN: Añadimos la columna "created_at" y el valor "NOW()"
         $sql = "INSERT INTO products (
                     nombre_producto,
                     alias,
@@ -143,7 +141,8 @@ try {
                     stock_minimo,
                     proveedor_id,
                     tipo_producto,
-                    state
+                    state,
+                    created_at
                 ) VALUES (
                     :nombre_producto,
                     :alias,
@@ -156,7 +155,8 @@ try {
                     :stock_minimo,
                     :proveedor_id,
                     :tipo_producto,
-                    :state
+                    :state,
+                    NOW()
                 )";
 
         $stmt = $pdo->prepare($sql);
@@ -180,7 +180,6 @@ try {
 
     // =========================================
     // 2. RECETA
-    // Solo si es elaborado
     // =========================================
     if ($tipo_producto === 'elaborado' && !empty($data['recipe'])) {
         $sqlR = "INSERT INTO product_ingredient (id_product, id_ingredient, cant_us)
@@ -188,7 +187,6 @@ try {
         $stmtR = $pdo->prepare($sqlR);
 
         $usados = [];
-
         foreach ($data['recipe'] as $item) {
             $ing_id = intval($item['id_ingredient'] ?? 0);
             $cant_us = floatval($item['cant_us'] ?? 0);
@@ -206,7 +204,6 @@ try {
 
     // =========================================
     // 3. COCINAS
-    // Solo si es elaborado
     // =========================================
     if ($tipo_producto === 'elaborado' && !empty($data['kitchens'])) {
         $sqlK = "INSERT INTO product_kitchen (product_id, kitchen_id)

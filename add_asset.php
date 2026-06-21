@@ -18,7 +18,7 @@ $data = json_decode($json, true);
 $nombre = $data['nombre'] ?? '';
 $categoria = $data['categoria'] ?? '';
 $stock = $data['stock'] ?? 0;
-$system = $data['system'] ?? 'mecapos'; // Default por si acaso
+$system = $data['system'] ?? 'mecapos';
 
 // CAMBIAR A LA DB CORRECTA ANTES DE INSERTAR
 $pdo->exec("USE `$system` ");
@@ -29,9 +29,11 @@ if ($nombre == '' || $categoria == '') {
 }
 
 try {
-    $stmt = $pdo->prepare("INSERT INTO assets (nombre, categoria, stock) VALUES (?, ?, ?)");
+    // Agregamos la columna "created_at" (o como se llame en tu tabla assets) y NOW()
+    $stmt = $pdo->prepare("INSERT INTO assets (nombre, categoria, stock, created_at) VALUES (?, ?, ?, NOW())");
     $stmt->execute([$nombre, $categoria, $stock]);
     echo json_encode(["error" => 0, "message" => "Asset creado"]);
 } catch (PDOException $e) {
     echo json_encode(["error" => 1, "message" => $e->getMessage()]);
 }
+?>

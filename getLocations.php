@@ -13,7 +13,7 @@ include('dbconnect.php');
 
 $stmt = $pdo->prepare("
     SELECT *
-    FROM locations
+    FROM locations where estado = 1
 ");
 
 $stmt->execute();
