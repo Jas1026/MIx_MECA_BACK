@@ -1,0 +1,12 @@
+stdClass Object
+(
+    [RespuestaCufd] => stdClass Object
+        (
+            [codigo] => FBQT5CJXxlRUE=ZFQkFFOTQ4OEU=Q288SUZXWkdhVUMzcxRjdGRjFGOE
+            [codigoControl] => 3E82579D2EEAF74
+            [direccion] => ENTRE EL PASAJE GARCIA Y LA AVENIDA SANCHEZ LIMA BELISARIO SALINAS Nro.: 518 Zona/Barrio.: SOPOCACHI BAJO
+            [fechaVigencia] => 2026-06-25T22:05:08.814-04:00
+            [transaccion] => 1
+        )
+
+)

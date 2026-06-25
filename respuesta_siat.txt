@@ -1,0 +1,11 @@
+stdClass Object
+(
+    [RespuestaServicioFacturacion] => stdClass Object
+        (
+            [codigoDescripcion] => VALIDADA
+            [codigoEstado] => 908
+            [codigoRecepcion] => 4ae806a3-703a-11f1-a745-adb8279ff5dd
+            [transaccion] => 1
+        )
+
+)

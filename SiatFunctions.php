@@ -92,7 +92,7 @@ public function generarXmlFactura($data, $cuf, $cufd, $fechaEnvio, $numFactura){
         <descuentoAdicional>0</descuentoAdicional>
         <codigoExcepcion xsi:nil="true"/>
         <cafc xsi:nil="true"/>
-        <leyenda>1</leyenda>
+        <leyenda>Ley N° 453: El proveedor deberá entregar el producto en las modalidades y términos ofertados o convenidos.</leyenda>
         <usuario>SISTEMA</usuario>
         <codigoDocumentoSector>1</codigoDocumentoSector>
     </cabecera>';
@@ -115,13 +115,15 @@ public function generarXmlFactura($data, $cuf, $cufd, $fechaEnvio, $numFactura){
     $xml .= '</facturaComputarizadaCompraVenta>';
     return $xml;
 }
-// Cambia la definición de la función
-public function enviarFactura($xml, $cufd, $fechaEnvio) { 
+
+public function enviarFactura($xml, $cufd, $fechaEnvio)
+{
     $gzData = gzencode($xml, 9);
     $archivoSoap = new SoapVar($gzData, XSD_BASE64BINARY);
     $archivoHash = hash("sha256", $gzData);
 
     $wsdl = "https://pilotosiatservicios.impuestos.gob.bo/v2/ServicioFacturacionCompraVenta?wsdl";
+
     $client = new SoapClient($wsdl, [
         'stream_context' => $this->getContext(),
         'cache_wsdl' => WSDL_CACHE_NONE,
@@ -144,11 +146,19 @@ public function enviarFactura($xml, $cufd, $fechaEnvio) {
             'nit' => $this->config['nit'],
             'tipoFacturaDocumento' => 1,
             'archivo' => $archivoSoap,
-            'fechaEnvio' => $fechaEnvio, // <--- USA LA FECHA PASADA POR PARÁMETRO
+            'fechaEnvio' => $fechaEnvio,
             'hashArchivo' => $archivoHash
         ]
     ];
-    return $client->recepcionFactura($params);
+
+    $response = $client->recepcionFactura($params);
+
+    file_put_contents(
+        __DIR__ . '/ultimo_envio.txt',
+        print_r($response, true)
+    );
+
+    return $response;
 }
 public function calcularCuf($numFactura, $fecha, $codigoControl){
     // Aseguramos que el NIT sea solo el número, sin el token
@@ -185,8 +195,16 @@ public function calcularCuf($numFactura, $fecha, $codigoControl){
         $decimal = bcdiv($decimal, "16", 0);
     }
 
-    // Retornamos el HEX y el CUFD (limpio de cualquier espacio o token)
-return strtoupper($hexCuf . $codigoControl);
+$cufGenerado = strtoupper($hexCuf . $codigoControl);
+
+file_put_contents(
+    __DIR__.'/debug_cuf.txt',
+    "HEX:\n".$hexCuf."\n\n".
+    "CONTROL:\n".$codigoControl."\n\n".
+    "CUF:\n".$cufGenerado
+);
+
+return $cufGenerado;
 }
 
 
