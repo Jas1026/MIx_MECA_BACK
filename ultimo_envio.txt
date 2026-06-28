@@ -2,10 +2,15 @@ stdClass Object
 (
     [RespuestaServicioFacturacion] => stdClass Object
         (
-            [codigoDescripcion] => VALIDADA
-            [codigoEstado] => 908
-            [codigoRecepcion] => 4ae806a3-703a-11f1-a745-adb8279ff5dd
-            [transaccion] => 1
+            [codigoDescripcion] => RECHAZADA
+            [codigoEstado] => 902
+            [mensajesList] => stdClass Object
+                (
+                    [codigo] => 1048
+                    [descripcion] => NUMERO DE DOCUMENTO NO VALIDO: Numero documento esperado distinto de 0 enviado 0
+                )
+
+            [transaccion] => 
         )
 
 )

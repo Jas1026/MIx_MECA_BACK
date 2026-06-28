@@ -5,25 +5,25 @@
         <razonSocialEmisor>VALERIA ALEJANDRA SALINAS CAMACHO</razonSocialEmisor> 
         <municipio>La Paz</municipio> 
         <telefono>2222222</telefono> 
-        <numeroFactura>755775</numeroFactura> 
-        <cuf>126D693D10BC678E39674D595E9FC12AD787E49A1673E82579D2EEAF74</cuf> 
-        <cufd>FBQT5CJXxlRUE=ZFQkFFOTQ4OEU=Q288SUZXWkdhVUMzcxRjdGRjFGOE</cufd> 
+        <numeroFactura>573474</numeroFactura> 
+        <cuf>126D693D10BC67977B89BB3066058CDBB7526B0614102436CA0EEEAF74</cuf> 
+        <cufd>FBQT5CJXxlRUE=ZFQkFFOTQ4OEU=Q0FCTHlXY0dhVUMzcxRjdGRjFGOE</cufd> 
         <codigoSucursal>0</codigoSucursal> 
         <direccion>Direccion del Establecimiento</direccion> 
         <codigoPuntoVenta>0</codigoPuntoVenta> 
-        <fechaEmision>2026-06-24T22:05:08.712</fechaEmision> 
+        <fechaEmision>2026-06-27T22:50:11.119</fechaEmision> 
         <nombreRazonSocial>SIN NOMBRE</nombreRazonSocial>
         <codigoTipoDocumentoIdentidad>1</codigoTipoDocumentoIdentidad>
-        <numeroDocumento>9900885</numeroDocumento>
+        <numeroDocumento>0</numeroDocumento>
         <complemento xsi:nil="true"/>
-        <codigoCliente>9900885</codigoCliente>
+        <codigoCliente>0</codigoCliente>
         <codigoMetodoPago>1</codigoMetodoPago>
         <numeroTarjeta xsi:nil="true"/>
-        <montoTotal>1515</montoTotal>
-        <montoTotalSujetoIva>1515</montoTotalSujetoIva>
+        <montoTotal>12</montoTotal>
+        <montoTotalSujetoIva>12</montoTotalSujetoIva>
         <codigoMoneda>1</codigoMoneda>
         <tipoCambio>1</tipoCambio>
-        <montoTotalMoneda>1515</montoTotalMoneda>
+        <montoTotalMoneda>12</montoTotalMoneda>
         <montoGiftCard xsi:nil="true"/>
         <descuentoAdicional>0</descuentoAdicional>
         <codigoExcepcion xsi:nil="true"/>
@@ -34,13 +34,13 @@
     </cabecera><detalle>
             <actividadEconomica>560000</actividadEconomica>
             <codigoProductoSin>99100</codigoProductoSin>
-            <codigoProducto>brownie de milanesa</codigoProducto>
-            <descripcion>brownie de milanesa</descripcion>
+            <codigoProducto>Brownie Premiun</codigoProducto>
+            <descripcion>Brownie Premiun</descripcion>
             <cantidad>1</cantidad>
             <unidadMedida>58</unidadMedida>
-            <precioUnitario>1515</precioUnitario>
+            <precioUnitario>12</precioUnitario>
             <montoDescuento>0</montoDescuento>
-            <subTotal>1515</subTotal>
+            <subTotal>12</subTotal>
             <numeroSerie xsi:nil="true"/>
             <numeroImei xsi:nil="true"/>
         </detalle></facturaComputarizadaCompraVenta>

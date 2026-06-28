@@ -112,7 +112,32 @@ $resultados = [];
 // ======================================
 // FACTURAR CADA PAGO
 // ======================================
+function obtenerNumeroFactura($conn)
+{
+    mysqli_begin_transaction($conn);
 
+    $sql = "SELECT numero_factura
+            FROM factura_correlativo
+            WHERE id = 1
+            FOR UPDATE";
+
+    $res = mysqli_query($conn, $sql);
+
+    $row = mysqli_fetch_assoc($res);
+
+    $nuevoNumero = $row['numero_factura'] + 1;
+
+    mysqli_query(
+        $conn,
+        "UPDATE factura_correlativo
+         SET numero_factura = $nuevoNumero
+         WHERE id = 1"
+    );
+
+    mysqli_commit($conn);
+
+    return $nuevoNumero;
+}
 foreach ($request->pagos as $data) {
     try {
         // ======================================
@@ -180,6 +205,10 @@ file_put_contents(
         // PDF
         // ======================================
 
+        // ======================================
+        // PDF (DISEÑO MEJORADO Y ESTILIZADO)
+        // ======================================
+
         $pdf = new TCPDF(
             'P',
             'mm',
@@ -189,176 +218,175 @@ file_put_contents(
             false
         );
 
-        $pdf->SetCreator('MIXURA');
-        $pdf->SetAuthor('MIXURA');
+        $pdf->SetCreator('MIXTURA');
+        $pdf->SetAuthor('MIXTURA');
         $pdf->SetTitle('Factura SIAT');
-        $pdf->SetMargins(5, 5, 5);
-        $pdf->SetAutoPageBreak(true, 10);
+        
+        // Márgenes limpios para evitar saltos de página accidentales
+        $pdf->SetMargins(6, 6, 6);
+        $pdf->SetAutoPageBreak(true, 8);
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
         $pdf->AddPage();
 
-        // ======================================
-        // COLORES
-        // ======================================
+        // Configuración de Paleta de Colores Corporativa
+        $colorDark        = [33, 37, 41];     // Negro Antracita moderno para títulos
+        $colorText        = [65, 70, 75];     // Gris oscuro balanceado para lectura suave
+        $colorMuted       = [120, 125, 130];  // Gris claro para etiquetas secundarias
+        $colorBorderLight = [230, 232, 235];  // Línea divisoria sutil
+        $colorZebra       = [248, 249, 250];  // Fondo alterno de la tabla
 
-        $colorPrincipal = [25, 25, 25];
-        $colorSecundario = [90, 90, 90];
-        $colorLinea = [220, 220, 220];
-
         // ======================================
-        // HEADER BONITO
+        // HEADER ELEGANTE CON BORDE REDONDEADO SUTIL
         // ======================================
-
-        $pdf->SetFillColor(25, 25, 25);
+        $pdf->SetFillColor($colorDark[0], $colorDark[1], $colorDark[2]);
         $pdf->RoundedRect(
-            5,
-            5,
-            $pdf->GetPageWidth() - 10,
-            20,
-            3,
+            6,
+            6,
+            $pdf->GetPageWidth() - 12,
+            18,
+            2,        // Radio de curvatura moderno
             '1111',
             'F'
         );
 
         $pdf->SetTextColor(255, 255, 255);
         $pdf->SetFont('helvetica', 'B', $logoSize);
-        $pdf->Cell(0, 8, 'MIXURA', 0, 1, 'C');
+        $pdf->Cell(0, 10, 'M I X U R A', 0, 1, 'C', false, '', 1); // Trackeo sutil
 
+        $pdf->SetFont('helvetica', 'B', $fontBase - 1);
+        $pdf->Cell(0, 4, 'FACTURA ELECTRÓNICA', 0, 1, 'C');
+        $pdf->Ln(5);
+
+        // ======================================
+        // INFORMACIÓN DE LA EMPRESA Y DOSIFICACIÓN
+        // ======================================
+        $pdf->SetTextColor($colorText[0], $colorText[1], $colorText[2]);
         $pdf->SetFont('helvetica', '', $fontBase);
-        $pdf->Cell(0, 5, 'FACTURA ELECTRONICA', 0, 1, 'C');
-        $pdf->Ln(6);
-
-        // ======================================
-        // RESET COLOR
-        // ======================================
-
-        $pdf->SetTextColor(0, 0, 0);
-
-        // ======================================
-        // INFO NEGOCIO
-        // ======================================
-
-        $pdf->SetFont('helvetica', '', $fontBase);
-        $pdf->Cell(0, 5, 'NIT: ' . $config['nit'], 0, 1);
-        $pdf->Cell(0, 5, 'FACTURA NRO: ' . $numFactura, 0, 1);
-        $pdf->Cell(0, 5, 'FECHA: ' . date('d/m/Y H:i'), 0, 1);
-
-        // ======================================
-        // LINEA
-        // ======================================
-
-        $pdf->Ln(1);
-        $pdf->SetDrawColor($colorLinea[0], $colorLinea[1], $colorLinea[2]);
-        $pdf->Line(5, $pdf->GetY(), $pdf->GetPageWidth() - 5, $pdf->GetY());
-        $pdf->Ln(3);
-
-        // ======================================
-        // CLIENTE
-        // ======================================
-
-        $pdf->SetFont('helvetica', 'B', $fontBase + 1);
-        $pdf->Cell(0, 5, 'DATOS CLIENTE', 0, 1);
-
-        $pdf->SetFont('helvetica', '', $fontBase);
-        $pdf->SetTextColor($colorSecundario[0], $colorSecundario[1], $colorSecundario[2]);
-        $pdf->Cell(0, 5, 'Nombre: ' . $data->razonSocial, 0, 1);
-        $pdf->Cell(0, 5, 'NIT/CI: ' . $data->nit, 0, 1);
-        $pdf->SetTextColor(0, 0, 0);
-        $pdf->Ln(3);
-
-        // ======================================
-        // TABLA HEADER
-        // ======================================
-
-        $pdf->SetFillColor(35, 35, 35);
-        $pdf->SetTextColor(255, 255, 255);
+        
+        // Bloque Izquierdo: NIT y Datos de Emisión
+        $pdf->Cell(($pdf->GetPageWidth() - 12) * 0.5, 4.5, 'NIT: ' . $config['nit'], 0, 0, 'L');
         $pdf->SetFont('helvetica', 'B', $fontBase);
+        $pdf->Cell(($pdf->GetPageWidth() - 12) * 0.5, 4.5, 'FACTURA N°: ' . $numFactura, 0, 1, 'R');
+        
+        $pdf->SetFont('helvetica', '', $fontBase);
+        $pdf->Cell(($pdf->GetPageWidth() - 12) * 0.5, 4.5, 'FECHA: ' . date('d/m/Y H:i'), 0, 0, 'L');
+        $pdf->SetTextColor($colorMuted[0], $colorMuted[1], $colorMuted[2]);
+        $pdf->Cell(($pdf->GetPageWidth() - 12) * 0.5, 4.5, 'Ambiente: Digital / En Línea', 0, 1, 'R');
 
+        // Línea Divisoria Estética Avanzada
+        $pdf->Ln(2);
+        $pdf->SetDrawColor($colorBorderLight[0], $colorBorderLight[1], $colorBorderLight[2]);
+        $pdf->SetLineWidth(0.3);
+        $pdf->Line(6, $pdf->GetY(), $pdf->GetPageWidth() - 6, $pdf->GetY());
+        $pdf->Ln(3);
+
+        // ======================================
+        // SECCIÓN CLIENTE CON TIPOGRAFÍA COMPACTA
+        // ======================================
+        $pdf->SetTextColor($colorDark[0], $colorDark[1], $colorDark[2]);
+        $pdf->SetFont('helvetica', 'B', $fontBase);
+        $pdf->Cell(0, 5, 'DATOS DEL CLIENTE', 0, 1, 'L');
+
+        $pdf->SetFont('helvetica', '', $fontBase);
+        $pdf->SetTextColor($colorText[0], $colorText[1], $colorText[2]);
+        
+        // Fila Nombre
+        $pdf->SetTextColor($colorMuted[0], $colorMuted[1], $colorMuted[2]);
+        $pdf->Cell(20, 4.5, 'Razón Social:', 0, 0, 'L');
+        $pdf->SetTextColor($colorDark[0], $colorDark[1], $colorDark[2]);
+        $pdf->Cell(0, 4.5, $data->razonSocial, 0, 1, 'L');
+
+        // Fila NIT/CI
+        $pdf->SetTextColor($colorMuted[0], $colorMuted[1], $colorMuted[2]);
+        $pdf->Cell(20, 4.5, 'NIT / CI:', 0, 0, 'L');
+        $pdf->SetTextColor($colorDark[0], $colorDark[1], $colorDark[2]);
+        $pdf->Cell(0, 4.5, $data->nit, 0, 1, 'L');
+        
+        $pdf->Ln(4);
+
+        // ======================================
+        // TABLA DE ITEMS MINIMALISTA Y LIMPIA
+        // ======================================
+        $pdf->SetFillColor($colorDark[0], $colorDark[1], $colorDark[2]);
+        $pdf->SetTextColor(255, 255, 255);
+        $pdf->SetFont('helvetica', 'B', $fontBase - 0.5);
+
+        // Calcular anchos proporcionales según formato seleccionado
         if ($formato == 'carta') {
-            $w1 = 90; $w2 = 25; $w3 = 35; $w4 = 35;
+            $w1 = 110; $w2 = 20; $w3 = 30; $w4 = 30;
         } elseif ($formato == '58') {
-            $w1 = 20; $w2 = 8;  $w3 = 10; $w4 = 10;
-        } else {
-            $w1 = 38; $w2 = 10; $w3 = 12; $w4 = 15;
+            $w1 = 22;  $w2 = 7;  $w3 = 8;  $w4 = 9;
+        } else { // Formato 80mm
+            $w1 = 36;  $w2 = 8;  $w3 = 11; $w4 = 13;
         }
 
-        $pdf->Cell($w1, 7, 'PRODUCTO', 0, 0, 'L', true);
-        $pdf->Cell($w2, 7, 'CANT', 0, 0, 'C', true);
-        $pdf->Cell($w3, 7, 'P/U', 0, 0, 'R', true);
-        $pdf->Cell($w4, 7, 'SUBT', 0, 1, 'R', true);
+        // Encabezados planos con relleno oscuro sin bordes toscos
+        $pdf->Cell($w1, 6.5, ' DETALLE', 0, 0, 'L', true);
+        $pdf->Cell($w2, 6.5, 'CANT', 0, 0, 'C', true);
+        $pdf->Cell($w3, 6.5, 'P.UNIT ', 0, 0, 'R', true);
+        $pdf->Cell($w4, 6.5, 'SUBTOTAL ', 0, 1, 'R', true);
 
-        // ======================================
-        // ITEMS
-        // ======================================
-
-        $pdf->SetFont('helvetica', '', $fontBase);
-        $pdf->SetTextColor(0, 0, 0);
+        $pdf->SetFont('helvetica', '', $fontBase - 0.5);
+        $pdf->SetTextColor($colorText[0], $colorText[1], $colorText[2]);
 
         $fill = false;
-
         foreach ($data->detalles as $item) {
             $subtotal = $item->cantidad * $item->precio;
 
-            if ($fill) {
-                $pdf->SetFillColor(248, 248, 248);
-            } else {
-                $pdf->SetFillColor(255, 255, 255);
-            }
-
-            $pdf->Cell($w1, 6, $item->descripcion, 0, 0, 'L', true);
-            $pdf->Cell($w2, 6, $item->cantidad, 0, 0, 'C', true);
-            $pdf->Cell($w3, 6, number_format($item->precio, 2), 0, 0, 'R', true);
-            $pdf->Cell($w4, 6, number_format($subtotal, 2), 0, 1, 'R', true);
+            // Renderizado de fondo cebra suave para separar los ítems visiblemente
+            $pdf->SetFillColor($colorZebra[0], $colorZebra[1], $colorZebra[2]);
+            
+            // Celdas limpias sin bordes pesados (uso de padding sutil usando espacios o posiciones)
+            $pdf->Cell($w1, 6, ' ' . $item->descripcion, 0, 0, 'L', $fill);
+            $pdf->Cell($w2, 6, $item->cantidad, 0, 0, 'C', $fill);
+            $pdf->Cell($w3, 6, number_format($item->precio, 2) . ' ', 0, 0, 'R', $fill);
+            $pdf->Cell($w4, 6, number_format($subtotal, 2) . ' ', 0, 1, 'R', $fill);
 
             $fill = !$fill;
         }
 
-        // ======================================
-        // TOTAL
-        // ======================================
-
-        $pdf->Ln(4);
-        $pdf->SetFont('helvetica', 'B', $fontBase + 3);
-        $pdf->SetTextColor(20, 20, 20);
-        $pdf->Cell(0, 8, 'TOTAL Bs ' . number_format($data->montoTotal, 2), 0, 1, 'R');
-
-        // ======================================
-        // MENSAJE
-        // ======================================
-
+        // Borde inferior de la tabla sutil
+        $pdf->SetDrawColor($colorBorderLight[0], $colorBorderLight[1], $colorBorderLight[2]);
+        $pdf->Line(6, $pdf->GetY(), $pdf->GetPageWidth() - 6, $pdf->GetY());
         $pdf->Ln(2);
-        $pdf->SetFont('helvetica', 'I', $fontBase);
-        $pdf->SetTextColor(90, 90, 90);
-        $pdf->Cell(0, 5, 'Gracias por su preferencia', 0, 1, 'C');
 
         // ======================================
-        // QR
+        // SECCIÓN TOTAL ENMARCADA CON ÉNFASIS
         // ======================================
+        $pdf->SetFont('helvetica', 'B', $fontBase + 2);
+        $pdf->SetTextColor($colorDark[0], $colorDark[1], $colorDark[2]);
+        
+        // Caja contenedora sutil para resaltar el total general
+        $pdf->SetFillColor($colorZebra[0], $colorZebra[1], $colorZebra[2]);
+        $pdf->Cell(0, 9, 'TOTAL Bs ' . number_format($data->montoTotal, 2) . ' ', 0, 1, 'R', true);
 
+        // ======================================
+        // CÓDIGO QR REDISEÑADO (Centrado Exacto)
+        // ======================================
         $qr = 'https://pilotosiat.impuestos.gob.bo/consulta/QR?nit=' . $config['nit'] . '&cuf=' . $cuf . '&numero=' . $numFactura . '&t=2';
 
         $pdf->Ln(4);
-        $qrSize = ($formato == 'carta') ? 45 : 30;
+        $qrSize = ($formato == 'carta') ? 40 : 28; // Reducción de tamaño para balance óptimo
         $xQr = ($pdf->GetPageWidth() - $qrSize) / 2;
 
+        // Estilo de barras QR limpio (L = Low Correction para escaneo inmediato)
         $pdf->write2DBarcode($qr, 'QRCODE,L', $xQr, $pdf->GetY(), $qrSize, $qrSize);
         $pdf->Ln($qrSize + 2);
 
         // ======================================
-        // CUF
+        // PIE DE FACTURA OFICIAL SIAT
         // ======================================
-
-        $pdf->SetFont('helvetica', '', $fontBase - 1);
-        $pdf->SetTextColor(80, 80, 80);
-        $pdf->MultiCell(0, 4, 'CUF: ' . $cuf, 0, 'C');
-
-        // ======================================
-        // LEYENDA FINAL
-        // ======================================
-
+        $pdf->SetFont('helvetica', '', $fontBase - 1.5);
+        $pdf->SetTextColor($colorMuted[0], $colorMuted[1], $colorMuted[2]);
+        
+        // CUF en MultiCell para evitar desbordes laterales si el código es largo
+        $pdf->MultiCell(0, 3, "CÓDIGO ÚNICO DE FACTURACIÓN (CUF):\n" . $cuf, 0, 'C', false, 1, '', '', true, 0, false, true, 0, 'T', false);
+        
         $pdf->Ln(2);
-        $pdf->SetFont('helvetica', '', $fontBase - 1);
-        $pdf->MultiCell(0, 4, 'ESTA FACTURA CONTRIBUYE AL DESARROLLO DEL PAIS.', 0, 'C');
-
+        $pdf->SetFont('helvetica', 'I', $fontBase - 1.5);
+        $pdf->SetTextColor($colorText[0], $colorText[1], $colorText[2]);
+        $pdf->MultiCell(0, 3.5, '"ESTA FACTURA CONTRIBUYE AL DESARROLLO DEL PAÍS, EL USO ILÍCITO DE ESTE DERECHO SERÁ SANCIONADO DE ACUERDO A LA LEY."', 0, 'C');
         // ======================================
         // CARPETA FACTURAS
         // ======================================
